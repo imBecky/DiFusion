@@ -16,6 +16,7 @@ rgb_list = ['UH_NAD83_272056_3290290.tif',
             'UH_NAD83_273844_3290290.tif']
 LIDAR_RASTER_PATH = '../data/Lidar GeoTiff Rasters/DSM_C12/UH17c_GEF051.txt'
 BASE_PATH = '../data/Lidar GeoTiff Rasters/DEM_C123_TLI/UH17_GEG05.txt'
+GROUND_TRUTH_PATH = '../data/Lidar GeoTiff Rasters/DEM_C123_TLI/UH17_GEG05.txt'
 
 
 class DatasetFromTensor(data.Dataset):
@@ -39,6 +40,7 @@ rgb = util.load_rgb_array(rgb_root, rgb_list)
 lidar_raster = util.load_lidar_raster(LIDAR_RASTER_PATH)
 base = util.base_loader(BASE_PATH)
 ndsm = lidar_raster - base
+gt = util.ground_truth_loader(GROUND_TRUTH_PATH)
 
-for item in [hsi, rgb, ndsm]:
+for item in [hsi, rgb, ndsm, gt]:
     print(item.shape)

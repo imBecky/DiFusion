@@ -1,6 +1,6 @@
 import numpy as np
 
-GROUND_PATH = '../data/Lidar GeoTiff Rasters/DEM_C123_TLI/UH17_GEG05.txt'
+GROUND_TRUTH_PATH = '../data/Lidar GeoTiff Rasters/DEM_C123_TLI/UH17_GEG05.txt'
 
 
 def edit_file(path):
@@ -12,7 +12,7 @@ def edit_file(path):
                 file.write(line)
 
 
-def array_loader(path):
+def ground_truth_loader(path):
     with open(path, 'r') as file:
         data_string = file.read()
         base = np.array(list(map(float, data_string.split())))
@@ -20,6 +20,6 @@ def array_loader(path):
         return base
 
 
-edit_file(GROUND_PATH)
-base = array_loader(GROUND_PATH)
+edit_file(GROUND_TRUTH_PATH)
+base = ground_truth_loader(GROUND_TRUTH_PATH)
 print(base)

@@ -58,3 +58,10 @@ def load_lidar_raster(path):
         raster = torch.from_numpy(raster).to(DEVICE)
     return raster
 
+
+def ground_truth_loader(path):
+    with open(path, 'r') as file:
+        data_string = file.read()
+        base = np.array(list(map(float, data_string.split())))
+        base = np.reshape(base, (8344, 2404))
+        return base
