@@ -34,13 +34,17 @@ class DatasetFromTensor(data.Dataset):
 
 
 hsi = util.load_hsi_narray(HSI_PATH)
+torch.save(hsi, 'hsi.pth')
 
 rgb = util.load_rgb_array(rgb_root, rgb_list)
+torch.save(rgb, 'rgb.pth')
 
 lidar_raster = util.load_lidar_raster(LIDAR_RASTER_PATH)
 base = util.base_loader(BASE_PATH)
 ndsm = lidar_raster - base
+torch.save(ndsm, 'ndsm.pth')
 gt = util.ground_truth_loader(GROUND_TRUTH_PATH)
+torch.save(gt, 'gt.pth')
 
 for item in [hsi, rgb, ndsm, gt]:
     print(item.shape)
