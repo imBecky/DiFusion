@@ -30,7 +30,9 @@ def load_lidar_raster(path):
         for line in data_strings[1:-1]:
             data_array = np.array(list(map(float, line.split())))
             data_array = data_array[:, np.newaxis]
-            # print(raster.shape)
+            indices = np.where(data_array == 1000)
+            if len(indices[0]) != 0:
+                data_array[indices[0], 0] = -16
             raster = np.concatenate((raster, data_array), axis=1)
         # data_array = np.array(list(map(float, data_string.split())))
         return raster
@@ -41,6 +43,6 @@ lidar_raster = torch.from_numpy(lidar_raster).to(DEVICE)
 base = base_loader(BASE_PATH)
 base = torch.from_numpy(base).to(DEVICE)
 ndsm = lidar_raster - base
-print(ndsm)
+# print(ndsm)
 
 

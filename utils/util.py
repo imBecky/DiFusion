@@ -52,11 +52,13 @@ def load_lidar_raster(path):
         for line in data_strings[1:-1]:
             data_array = np.array(list(map(float, line.split())))
             data_array = data_array[:, np.newaxis]
-            # print(raster.shape)
+            indices = np.where(data_array == 1000)
+            if len(indices[0]) != 0:
+                data_array[indices[0], 0] = -16
             raster = np.concatenate((raster, data_array), axis=1)
         # data_array = np.array(list(map(float, data_string.split())))
         raster = torch.from_numpy(raster).to(DEVICE)
-    return raster
+        return raster
 
 
 def ground_truth_loader(path):
