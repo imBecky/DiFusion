@@ -1,50 +1,35 @@
-import torch
-from utils import util
 import torch.utils.data as data
-
-"""
-HSI Size : (50, 4172, 1202)
-RGB Size : (47680, 12020, 3)
-Lidar Raster : (8344, 2404)
-"""
-
-HSI_PATH = '../data/FullHSIDataset/20170218_UH_CASI_S4_NAD83.txt'
-rgb_root = '../data/Final RGB HR Imagery/'
-rgb_list = ['UH_NAD83_272056_3290290.tif',
-            'UH_NAD83_272652_3290290.tif',
-            'UH_NAD83_273248_3290290.tif',
-            'UH_NAD83_273844_3290290.tif']
-LIDAR_RASTER_PATH = '../data/Lidar GeoTiff Rasters/DSM_C12/UH17c_GEF051.txt'
-BASE_PATH = '../data/Lidar GeoTiff Rasters/DEM_C123_TLI/UH17_GEG05.txt'
-GROUND_TRUTH_PATH = '../data/Lidar GeoTiff Rasters/DEM_C123_TLI/UH17_GEG05.txt'
+import torch
+from torch.utils.data import DataLoader
+import torchvision.transforms as transforms
 
 
-class DatasetFromTensor(data.Dataset):
-    def __init__(self, tensor, gt, dataset_name):
-        super(DatasetFromTensor, self).__init__()
-        self.data = tensor
-        self.gt = gt
-        self.dataset_name = dataset_name
+class EncodingDataset(data.Dataset):
+    def __init__(self, input_path, stride=(20, 20), patch_size=(64, 64), transform=None):
+        """
+        TODO: not sure about the stride
+        """
+        super(EncodingDataset, self).__init__()
+        self.data = torch.load(input_path, weights_only=True)
+        self.transform = transform
+        self.stride = stride
+        self.patch_size = patch_size
+        self.patches = self._generate_patches()
 
-    def __getitem__(self, index):
-        pass
+    def _generate_patches(self):
+        patches = []
+        height, width = self.data.shape[:2]
+        patch_height, patch_width = self.patch_size
+        stride_y, stride_x = self.stride
+        for y in range(0, height-patch_height+1, stride_y):
+            for x in range(0, width-patch_width+1, stride_x):
+                patch = self.data[y:y+patch_height, x:x+patch_width, :]
+                patches.append(patch)
+        return patches
+
+    def __getitem__(self, item):
+        return self.patches[item]
 
     def __len__(self):
-        return self.data.shape
+        return len(self.patches)
 
-
-hsi = util.load_hsi_narray(HSI_PATH)
-torch.save(hsi, '../data/tensor/hsi.pth')
-
-rgb = util.load_rgb_array(rgb_root, rgb_list)
-torch.save(rgb, '../data/tensor/rgb.pth')
-
-lidar_raster = util.load_lidar_raster(LIDAR_RASTER_PATH)
-base = util.base_loader(BASE_PATH)
-ndsm = lidar_raster - base
-torch.save(ndsm, '../data/tensor/ndsm.pth')
-gt = util.ground_truth_loader(GROUND_TRUTH_PATH)
-torch.save(gt, '../data/tensor/gt.pth')
-
-for item in [hsi, rgb, ndsm, gt]:
-    print(item.shape)

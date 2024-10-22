@@ -1,7 +1,9 @@
 import torch
 import numpy as np
 import cv2
+import torch.nn.functional as F
 HSI_SHAPE = (50, 4172, 1202)   # (band, width, height)
+new_shape = (50, 8344, 2404)
 
 
 def try_gpu(i=0):
@@ -67,3 +69,5 @@ def ground_truth_loader(path):
         base = np.array(list(map(float, data_string.split())))
         base = np.reshape(base, (8344, 2404))
         return base
+
+
