@@ -73,3 +73,6 @@ def Step2(step2=False):
 
 # Step1(True)
 # Step2(True)
+t = torch.load('../data/tensor/hsi.pth')
+t = t[0]
+torch.save(t, '../data/tensor/hsi.pth')
