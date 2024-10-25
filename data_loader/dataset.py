@@ -5,12 +5,12 @@ import torchvision.transforms as transforms
 
 
 class EncodingDataset(data.Dataset):
-    def __init__(self, input_path, stride=(20, 20), patch_size=(64, 64), transform=None):
+    def __init__(self, inputs, stride=(20, 20), patch_size=(64, 64), transform=None):
         """
         TODO: not sure about the stride
         """
         super(EncodingDataset, self).__init__()
-        self.data = torch.load(input_path, weights_only=True)
+        self.data = inputs
         self.transform = transform
         self.stride = stride
         self.patch_size = patch_size
@@ -33,3 +33,15 @@ class EncodingDataset(data.Dataset):
     def __len__(self):
         return len(self.patches)
 
+
+class FeatureDataset(data.Dataset):
+    def __init__(self, input_path, gt_path):
+        super(FeatureDataset, self).__init__()
+        self.input = torch.load(input_path, weights_only=True)
+        self.label = torch.load(gt_path, weights_only=True)
+
+    def __getitem__(self, item):
+        return self.input[item], self.label[item]
+
+    def __len__(self):
+        return len(self.label)
