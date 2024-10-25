@@ -35,13 +35,30 @@ class EncodingDataset(data.Dataset):
 
 
 class FeatureDataset(data.Dataset):
-    def __init__(self, input_path, gt_path):
+    def __init__(self, input_tensor, gt_path, stride=(20, 20), patch_size=(64, 64), transform=None):
         super(FeatureDataset, self).__init__()
-        self.input = torch.load(input_path, weights_only=True)
+        self.transform = transform
+        self.stride = stride
+        self.patch_size = patch_size
+        self.input = torch.load(input_tensor, weights_only=True)
         self.label = torch.load(gt_path, weights_only=True)
+        self.patches = self._generate_patches()
+
+    def _generate_patches(self):
+        patches = []
+        height, width = self.label.shape[:2]
+        patch_height, patch_width = self.patch_size
+        stride_y, stride_x = self.stride
+        count = 0
+        for y in range(0, height - patch_height + 1, stride_y):
+            for x in range(0, width - patch_width + 1, stride_x):
+                inputs = self.input[count]
+                patch = self.label[y:y + patch_height, x:x + patch_width, :]
+                patches.append(patch)
+        return patches
 
     def __getitem__(self, item):
-        return self.input[item], self.label[item]
+        return self.input[item], self.patches[item]
 
     def __len__(self):
         return len(self.label)
