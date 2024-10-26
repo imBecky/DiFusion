@@ -8,12 +8,13 @@ from torchvision.models import resnet50
 from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader
 from data_loader.dataset import EncodingDataset
-from data_loader.dataset import FeatureDataset
+from data_loader.dataset import LabelDataset
 
 HSI_PATH = './data/tensor/hsi.pth'
 GT_PATH = './data/tensor/gt.pth'
 CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLS_EPOCH = 10
+IF_SMALL_BATCHES = True
 
 
 class Reshape(nn.Module):
@@ -43,7 +44,7 @@ class Classifier(nn.Module):
         return x
 
 
-def encode_hsi(inputs, model):
+def block1_hsi(inputs, model):
     raw_dataset_hsi = EncodingDataset(inputs)
     raw_data_loader_hsi = DataLoader(raw_dataset_hsi, batch_size=32, shuffle=True)
     features = None
@@ -52,7 +53,7 @@ def encode_hsi(inputs, model):
         count += 1
         batch = torch.permute(batch, (0, 3, 1, 2))  # prepose the channel dim
         feature = model(batch)
-        print(f'{count}: HSI encode DONE, the shape of output is {feature.shape}')
+        # print(f'{count}: HSI encode DONE, the shape of output is {feature.shape}')
         if features is not None:
             features = torch.cat((features, feature), dim=0)
         else:
@@ -71,8 +72,8 @@ loss = nn.CrossEntropyLoss()
 optimizer = optim.Adam(classifier.parameters(), lr=0.001)
 
 inputs_hsi = torch.load(HSI_PATH, weights_only=True)
-hsi_feature = encode_hsi(inputs_hsi, encoder)
-feature_dataset_hsi = FeatureDataset(hsi_feature, GT_PATH)
+hsi_feature = block1_hsi(inputs_hsi, encoder)
+feature_dataset_hsi = LabelDataset(hsi_feature, GT_PATH, if_small_batches=IF_SMALL_BATCHES)
 feature_data_loader_hsi = DataLoader(feature_dataset_hsi, batch_size=32, shuffle=True)
 for epoch in range(CLS_EPOCH):
     for inputs, label in feature_data_loader_hsi:

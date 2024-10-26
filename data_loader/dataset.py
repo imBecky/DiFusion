@@ -1,31 +1,35 @@
 import torch.utils.data as data
 import torch
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
+
+SMALL_PATCH_NUM = 1000
 
 
-class EncodingDataset(data.Dataset):
-    def __init__(self, inputs, stride=(20, 20), patch_size=(64, 64), transform=None):
-        """
-        TODO: not sure about the stride
-        """
-        super(EncodingDataset, self).__init__()
-        self.data = inputs
-        self.transform = transform
+class HsiDataset(data.Dataset):
+    def __init__(self, inputs, labels, stride=(20, 20), patch_size=(64, 64), transform=None, small_batches=False):
+        super(HsiDataset, self).__init__()
+        self.inputs = inputs
+        self.labels = labels
         self.stride = stride
         self.patch_size = patch_size
+        self.transformation = transform
+        self.small_batches = small_batches
         self.patches = self._generate_patches()
 
     def _generate_patches(self):
+        count = 0
         patches = []
-        height, width = self.data.shape[:2]
-        patch_height, patch_width = self.patch_size
-        stride_y, stride_x = self.stride
-        for y in range(0, height-patch_height+1, stride_y):
-            for x in range(0, width-patch_width+1, stride_x):
-                patch = self.data[y:y+patch_height, x:x+patch_width, :]
+        stride_x, stride_y = self.stride
+        patch_width, patch_height = self.patch_size
+        width, height = self.inputs.shape[:2]
+        for x in range(0, width-patch_width+1, stride_x):
+            if self.small_batches is True and count == SMALL_PATCH_NUM:
+                break
+            for y in range(0, height-patch_height+1, stride_y):
+                patch = self.inputs[x:x + patch_width, y:y + patch_height, :], \
+                        self.labels[x:x + patch_width, y:y + patch_height]
                 patches.append(patch)
-        return patches
+                count += 1
+            return patches
 
     def __getitem__(self, item):
         return self.patches[item]
@@ -34,31 +38,3 @@ class EncodingDataset(data.Dataset):
         return len(self.patches)
 
 
-class FeatureDataset(data.Dataset):
-    def __init__(self, input_tensor, gt_path, stride=(20, 20), patch_size=(64, 64), transform=None):
-        super(FeatureDataset, self).__init__()
-        self.transform = transform
-        self.stride = stride
-        self.patch_size = patch_size
-        self.input = torch.load(input_tensor, weights_only=True)
-        self.label = torch.load(gt_path, weights_only=True)
-        self.patches = self._generate_patches()
-
-    def _generate_patches(self):
-        patches = []
-        height, width = self.label.shape[:2]
-        patch_height, patch_width = self.patch_size
-        stride_y, stride_x = self.stride
-        count = 0
-        for y in range(0, height - patch_height + 1, stride_y):
-            for x in range(0, width - patch_width + 1, stride_x):
-                inputs = self.input[count]
-                patch = self.label[y:y + patch_height, x:x + patch_width, :]
-                patches.append(patch)
-        return patches
-
-    def __getitem__(self, item):
-        return self.input[item], self.patches[item]
-
-    def __len__(self):
-        return len(self.label)
