@@ -1,7 +1,7 @@
 import torch.utils.data as data
 import torch
 
-SMALL_PATCH_NUM = 1000
+SMALL_PATCH_NUM = 992
 
 
 class HsiDataset(data.Dataset):
@@ -21,15 +21,17 @@ class HsiDataset(data.Dataset):
         stride_x, stride_y = self.stride
         patch_width, patch_height = self.patch_size
         width, height = self.inputs.shape[:2]
-        for x in range(0, width-patch_width+1, stride_x):
-            if self.small_batches is True and count == SMALL_PATCH_NUM:
+        for y in range(0, height-patch_height+1, stride_y):
+            if self.small_batches is True and count >= SMALL_PATCH_NUM:
                 break
-            for y in range(0, height-patch_height+1, stride_y):
+            for x in range(0, width-patch_width+1, stride_x):
+                if self.small_batches is True and count >= SMALL_PATCH_NUM:
+                    break
                 patch = self.inputs[x:x + patch_width, y:y + patch_height, :], \
                         self.labels[x:x + patch_width, y:y + patch_height]
                 patches.append(patch)
                 count += 1
-            return patches
+        return patches
 
     def __getitem__(self, item):
         return self.patches[item]

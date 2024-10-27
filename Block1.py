@@ -22,4 +22,4 @@ encoder = encoder.to(CUDA0)
 for data, label in data_loader_hsi:
     data = torch.permute(data, (0, 3, 1, 2))  # prepose the channel dim
     features = encoder(data)
-    print(features.shape)
+
