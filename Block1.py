@@ -9,7 +9,7 @@ from data_loader.dataset import HsiDataset
 HSI_PATH = './data/tensor/hsi.pth'
 GT_PATH = './data/tensor/gt.pth'
 CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CLS_EPOCH = 10
+CLS_EPOCH = 20
 IF_SMALL_BATCHES = True
 
 
@@ -34,13 +34,13 @@ class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(1000, 32*32),
+            nn.Linear(1000, 16*16),
             nn.ReLU(),
-            nn.BatchNorm1d(32*32),
+            nn.BatchNorm1d(16*16),
             nn.Dropout(0.5),
-            nn.Linear(32*32, 64*64),
+            nn.Linear(16*16, 32*32),
             nn.ReLU(),
-            Reshape((64, 64))
+            Reshape((32, 32))
         )
 
     def forward(self, x):
@@ -57,7 +57,7 @@ encoder.conv1 = torch.nn.Conv2d(48, 64, kernel_size=7, stride=2, padding=3, bias
 encoder = encoder.to(CUDA0)
 classifier = Classifier().to(CUDA0)
 criterion = nn.CrossEntropyLoss().to(CUDA0)
-optimizer = optim.Adam(classifier.parameters(), lr=0.001)
+optimizer = optim.Adam(classifier.parameters(), lr=0.05)
 for epoch in range(CLS_EPOCH):
     running_loss = 0.0
     for data, label in data_loader_hsi:
@@ -65,8 +65,8 @@ for epoch in range(CLS_EPOCH):
         data = torch.permute(data, (0, 3, 1, 2))  # prepose the channel dim
         features = encoder(data)
         output = classifier(features)
-        print(f'output:{output[:15]}')
-        print(f'label:{label[:15]}')
+        # print(f'output:{output[:15]}')
+        # print(f'label:{label[:15]}')
         loss = criterion(output, label)
         loss.backward()
         optimizer.step()

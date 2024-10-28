@@ -5,7 +5,7 @@ SMALL_PATCH_NUM = 992
 
 
 class HsiDataset(data.Dataset):
-    def __init__(self, inputs, labels, stride=(20, 20), patch_size=(64, 64), transform=None, small_batches=False):
+    def __init__(self, inputs, labels, stride=(2, 2), patch_size=(32, 32), transform=None, small_batches=False):
         super(HsiDataset, self).__init__()
         self.inputs = inputs
         self.labels = labels
@@ -28,7 +28,7 @@ class HsiDataset(data.Dataset):
                 if self.small_batches is True and count >= SMALL_PATCH_NUM:
                     break
                 patch = self.inputs[x:x + patch_width, y:y + patch_height, :], \
-                        self.labels[x:x + patch_width, y:y + patch_height]
+                        torch.tensor(self.labels[x:x + patch_width, y:y + patch_height], dtype=torch.float)
                 patches.append(patch)
                 count += 1
         return patches
