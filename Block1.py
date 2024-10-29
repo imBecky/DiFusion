@@ -31,6 +31,7 @@ class Reshape(nn.Module):
 
 
 class Classifier(nn.Module):
+    """TODO: deepen the model"""
     def __init__(self):
         super(Classifier, self).__init__()
         self.model = nn.Sequential(
@@ -48,6 +49,21 @@ class Classifier(nn.Module):
         return x
 
 
+def hsi_train(dataloader, encoder, classifier, criterion, optimizer, epoch_num):
+    for epoch in range(epoch_num):
+        running_loss = 0.0
+        for data, label in dataloader:
+            data, label = data.to(CUDA0), label.to(CUDA0)
+            data = torch.permute(data, (0, 3, 1, 2))  # prepose the channel dim
+            features = encoder(data)
+            output = classifier(features)
+            loss = criterion(output, label)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+        print(f'Epoch {epoch + 1}, Loss: {running_loss / len(data_loader_hsi)}')
+
+
 data_hsi = torch.load(HSI_PATH, weights_only=False)
 gt = torch.load(GT_PATH, weights_only=False)
 dataset_hsi = HsiDataset(data_hsi, gt, small_batches=IF_SMALL_BATCHES)
@@ -58,17 +74,5 @@ encoder = encoder.to(CUDA0)
 classifier = Classifier().to(CUDA0)
 criterion = nn.CrossEntropyLoss().to(CUDA0)
 optimizer = optim.Adam(classifier.parameters(), lr=0.05)
-for epoch in range(CLS_EPOCH):
-    running_loss = 0.0
-    for data, label in data_loader_hsi:
-        data, label = data.to(CUDA0), label.to(CUDA0)
-        data = torch.permute(data, (0, 3, 1, 2))  # prepose the channel dim
-        features = encoder(data)
-        output = classifier(features)
-        # print(f'output:{output[:15]}')
-        # print(f'label:{label[:15]}')
-        loss = criterion(output, label)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-    print(f'Epoch {epoch + 1}, Loss: {running_loss / len(data_loader_hsi)}')
+
+hsi_train(data_loader_hsi, encoder, classifier, criterion, optimizer, CLS_EPOCH)

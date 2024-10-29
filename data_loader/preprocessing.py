@@ -2,8 +2,10 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+import cv2
 
 HSI_PATH = '../data/tensor/hsi.pth'
+RGB_PATH = '../data/tensor/rgb.pth'
 
 
 def try_gpu(i=0):
@@ -12,7 +14,7 @@ def try_gpu(i=0):
     return torch.device('cpu')
 
 
-DEVICE = try_gpu()
+CUDA0 = try_gpu()
 
 
 class TemptDataset(Dataset):
@@ -64,7 +66,7 @@ def Step1(step1=False):
 
 def Step2(step2=False):
     if step2:
-        resampled_hsi = torch.tensor([]).to(DEVICE)
+        resampled_hsi = torch.tensor([]).to(CUDA0)
         for i in range(8):
             block = torch.load(f'../data/tempt/{i}.pth')
             resampled_hsi = torch.cat((resampled_hsi, block), dim=1)
@@ -72,8 +74,25 @@ def Step2(step2=False):
         torch.save(resampled_hsi, '../data/tensor/hsi.pth')
 
 
-Step1(True)
-Step2(True)
-t = torch.load('../data/tensor/hsi.pth')
-t = t[0]
-torch.save(t, '../data/tensor/hsi.pth')
+def hsi_pre_processing(hsi_p=False):
+    Step1(True)
+    Step2(True)
+    t = torch.load('../data/tensor/hsi.pth')
+    t = t[0]
+    torch.save(t, '../data/tensor/hsi.pth')
+
+
+def rgb_pre_processing(rgb_p=False):
+    rgb = torch.load(RGB_PATH, weights_only=False)
+    rgb = torch.permute(rgb, (1, 2, 0))
+    rgb = rgb.to(torch.device('cpu'))
+    rgb_np = rgb.numpy()
+    downsampled_height = rgb.shape[0] // 10
+    downsampled_width = rgb.shape[1] // 10
+    downsampled_rgb = cv2.resize(rgb_np, (downsampled_width, downsampled_height), interpolation=cv2.INTER_LINEAR)
+    downsampled_rgb = torch.from_numpy(downsampled_rgb).to(CUDA0)
+    print(downsampled_rgb.shape)
+    torch.save(downsampled_rgb, '../data/tensor/rgb.pth')
+
+
+rgb_pre_processing(True)
