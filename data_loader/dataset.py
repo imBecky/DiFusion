@@ -4,10 +4,10 @@ import torch
 SMALL_PATCH_NUM = 992
 
 
-class HsiDataset(data.Dataset):
+class DatasetFromTensor(data.Dataset):
     def __init__(self, inputs, labels, stride=(2, 2), patch_size=(32, 32), transform=None, small_batches=False):
-        super(HsiDataset, self).__init__()
-        self.inputs = inputs
+        super(DatasetFromTensor, self).__init__()
+        self.inputs = inputs.float()
         self.labels = labels
         self.stride = stride
         self.patch_size = patch_size
@@ -38,6 +38,4 @@ class HsiDataset(data.Dataset):
 
     def __len__(self):
         return len(self.patches)
-
-
 

@@ -6,6 +6,7 @@ import cv2
 
 HSI_PATH = '../data/tensor/hsi.pth'
 RGB_PATH = '../data/tensor/rgb.pth'
+NDSM_PATH = '../data/tensor/ndsm.pth'
 
 
 def try_gpu(i=0):
@@ -82,17 +83,29 @@ def hsi_pre_processing(hsi_p=False):
     torch.save(t, '../data/tensor/hsi.pth')
 
 
-def rgb_pre_processing(rgb_p=False):
-    rgb = torch.load(RGB_PATH, weights_only=False)
-    rgb = torch.permute(rgb, (1, 2, 0))
-    rgb = rgb.to(torch.device('cpu'))
-    rgb_np = rgb.numpy()
-    downsampled_height = rgb.shape[0] // 10
-    downsampled_width = rgb.shape[1] // 10
-    downsampled_rgb = cv2.resize(rgb_np, (downsampled_width, downsampled_height), interpolation=cv2.INTER_LINEAR)
-    downsampled_rgb = torch.from_numpy(downsampled_rgb).to(CUDA0)
-    print(downsampled_rgb.shape)
-    torch.save(downsampled_rgb, '../data/tensor/rgb.pth')
+def rgb_pre_processing(path, rgb_p=False):
+    if rgb_p:
+        rgb = torch.load(path, weights_only=False)
+        rgb = torch.permute(rgb, (1, 2, 0))
+        rgb = rgb.to(torch.device('cpu'))
+        rgb_np = rgb.numpy()
+        downsampled_height = rgb.shape[0] // 10
+        downsampled_width = rgb.shape[1] // 10
+        downsampled_rgb = cv2.resize(rgb_np, (downsampled_width, downsampled_height), interpolation=cv2.INTER_LINEAR)
+        downsampled_rgb = torch.from_numpy(downsampled_rgb).to(CUDA0)
+        print(downsampled_rgb.shape)
+        torch.save(downsampled_rgb, '../data/tensor/rgb.pth')
 
 
-rgb_pre_processing(True)
+def ndsm_pre_processing(path, ndsm_p=False):
+    if ndsm_p:
+        ndsm = torch.load(path, weights_only=False)
+        ndsm = ndsm.unsqueeze(2)
+        ndsm = ndsm[1192:5960, 1202:, :]
+        print(ndsm.shape)
+        torch.save(ndsm, '../data/tensor/ndsm.pth')
+
+
+rgb_pre_processing(RGB_PATH, False)
+ndsm_pre_processing(NDSM_PATH, True)
+
