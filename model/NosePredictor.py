@@ -25,3 +25,12 @@ def predict_noise(unet, input_data, t, encoder_hidden_states=None):
     # 使用UNet预测噪声
     noise_pred = unet(input_data, t, encoder_hidden_states)
     return noise_pred
+
+# 假设我们已经有了一个UNet模型实例`unet`和一些输入数据`input_data`
+# 以及时间步`t`和编码器隐藏状态`encoder_hidden_states`
+
+# 预测噪声
+noise_pred = predict_noise(unet, input_data, t, encoder_hidden_states)
+
+# 根据预测的噪声和当前的噪声样本计算前一个时间步的样本
+# 这里省略了具体的计算过程，因为它涉及到扩散过程的具体实现细节
