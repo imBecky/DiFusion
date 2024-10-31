@@ -39,7 +39,7 @@ class Classifier(nn.Module):
         self.model = nn.Sequential(
             nn.Linear(1000, 16*16),
             nn.ReLU(),
-            nn.BatchNorm1d(16*16),
+            nn.BatchNorm1d(2),
             nn.Dropout(0.5),
             nn.Linear(16*16, 32*32),
             nn.ReLU(),

@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import cv2
+import torch.nn as nn
 import torch.nn.functional as F
 HSI_SHAPE = (50, 4172, 1202)   # (band, width, height)
 new_shape = (50, 8344, 2404)
@@ -70,4 +71,20 @@ def ground_truth_loader(path):
         base = np.reshape(base, (4768, 1202))
         return base
 
+
+class Reshape(nn.Module):
+    def __init__(self, new_shape):
+        super(Reshape, self).__init__()
+        self.new_shape = new_shape
+
+    def forward(self, x):
+        # Ensure that the input tensor size matches the product of new_sthape
+        batch_size = x.size(0)
+        num_elements = 1
+        for dim in self.new_shape:
+            num_elements *= dim
+
+        if x.shape[1] != num_elements:
+            raise ValueError("Total number of elements must be the same after reshape")
+        return x.view(batch_size, *self.new_shape)
 
