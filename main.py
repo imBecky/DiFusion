@@ -1,4 +1,4 @@
-from model.Block1  import *
+from model.Block1 import *
 import torch
 
 DATA_ROOT = './data/tensor'
@@ -18,6 +18,7 @@ encoder_hsi = GenerateEncoders(1)
 encoder_ndsm = GenerateEncoders(2)
 encoder_rgb = GenerateEncoders(3)
 
+
 # classifier = Classifier().to(CUDA0)
 # criterion = nn.CrossEntropyLoss().to(CUDA0)
 # optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
@@ -26,4 +27,5 @@ encoder_rgb = GenerateEncoders(3)
 # Train(data_loader_ndsm_train, encoder_ndsm, classifier, criterion, optimizer, CLS_EPOCH)
 # Train(data_loader_rgb_train, encoder_rgb, classifier, criterion, optimizer, CLS_EPOCH)
 # Test(data_loader_rgb_test, encoder_rgb, classifier)
+
 
