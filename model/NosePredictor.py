@@ -62,3 +62,15 @@ def generate_cosine_schedule(T, s=0.008):
 
 def generate_linear_schedule(T, low, high):
     return np.linspace(low, high, T)
+
+
+def cosine_annealing_schedule(length_T, initial, final=0.001):
+    beta_schedual = initial * (final / initial) ** (0.5 * np.cos(np.pi * np.arange(length_T) / length_T))
+    return beta_schedual
+
+
+T = 500
+initial = 0.1
+
+beta_array = cosine_annealing_schedule(T, initial)
+print(beta_array)
