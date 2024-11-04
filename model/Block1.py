@@ -5,6 +5,8 @@ from torchvision.models import resnet50
 from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
 from data_loader.dataset import DatasetFromTensor
+import tqdm
+from .NoisePredictor import q_sample
 
 DATA_ROOT = './data/tensor'
 GT_PATH = './data/tensor/gt.pth'
@@ -51,6 +53,25 @@ class Classifier(nn.Module):
         return x
 
 
+class MyEncoder(nn.Module):
+    def __init__(self, input_dim):
+        super(MyEncoder, self).__init__()
+        self.input_dim = input_dim
+        self.encoder = self.gen_encoder()
+        self.reshape = Reshape((32, 32))
+
+    def gen_encoder(self):
+        encoder = resnet50(weights=ResNet50_Weights.DEFAULT).eval()
+        encoder.conv1 = torch.nn.Conv2d(self.input_dim, 64, kernel_size=(7, 7), stride=(2, 2), padding=3, bias=False)
+        encoder.fc = torch.nn.Linear(2048, 1024, bias=True)
+        return encoder
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.reshape(x)
+        return x
+
+
 def SpliteDataset(dataset, batch_size, ratio):
     train_size = int(ratio * len(dataset))
     test_size = len(dataset) - train_size
@@ -83,35 +104,38 @@ def GenerateEncoders(option=0):
     if option == 0:
         print('No encoder generated!')
     elif option == 1:
-        encoder1 = resnet50(weights=ResNet50_Weights.DEFAULT).eval()
-        encoder1.conv1 = torch.nn.Conv2d(48, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        encoder1 = MyEncoder(48)
         encoder1 = encoder1.to(CUDA0)
         return encoder1
     elif option == 2:
-        encoder2 = resnet50(weights=ResNet50_Weights.DEFAULT).eval()
-        encoder2.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        encoder2 = MyEncoder(1)
         encoder2 = encoder2.to(CUDA0)
         return encoder2
     elif option == 3:
-        encoder3 = resnet50(weights=ResNet50_Weights.DEFAULT).eval()
-        encoder3.conv1 = torch.nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        encoder3 = MyEncoder(3)
         encoder3 = encoder3.to(CUDA0)
         return encoder3
 
 
-def Train(dataloader_train, encoder, classifier, criterion, optimizer, epoch_num):
+def Train(dataloader_train, encoder, classifier, T, criterion, optimizer, epoch_num):
+    print(encoder)
     for epoch in range(epoch_num):
         running_loss = 0.0
-        for data, label in dataloader_train:
-            data, label = data.to(CUDA0), label.to(CUDA0)
-            data = torch.permute(data, (0, 3, 1, 2))  # prepose the channel dim
-            features = encoder(data)
-            output = classifier(features)
-            loss = criterion(output, label)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader_train)}')
+        loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
+        for step, (datas, labels) in loop:
+            datas, labels = datas.to(CUDA0), labels.to(CUDA0)
+            datas = torch.permute(datas, (0, 3, 1, 2))    # pre_pose the channel dim (b, c, h, w)
+            features = encoder(datas)
+            batch_size = features.shape[0]
+            t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
+            noised = q_sample(features, t)
+
+        #     output = classifier(features)
+        #     loss = criterion(output, label)
+        #     loss.backward()
+        #     optimizer.step()
+        #     running_loss += loss.item()
+        # print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader_train)}')
 
 
 def Test(dataloader_test, encoder, classifier):

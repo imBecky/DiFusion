@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import copy
 from utils.util import EMA
 
+CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class GaussianDiffusion(nn.Module):
     def __init__(self, model, betas,
@@ -36,41 +38,43 @@ class GaussianDiffusion(nn.Module):
 
     def add_noise(self, X0, t, noise):
         """TODO: get noise in the def rather than get it """
-        sqrt_alpha_prod = self.sqrt_alpha_prod[:t]
-        sqrt_one_minus_alpha_prod = (1.0 - self.alphas_cumprod[:t]) ** 0.5
-        X_t = sqrt_alpha_prod * X0 + sqrt_one_minus_alpha_prod * noise
+        sqrt_alphas_prod = self.sqrt_alphas_prod[:t]
+        sqrt_one_minus_alphas_prod = (1.0 - self.alphas_cumprod[:t]) ** 0.5
+        X_t = sqrt_alphas_prod * X0 + sqrt_one_minus_alphas_prod * noise
         return X_t
-
-
-def generate_cosine_schedule(T, s=0.008):
-    def f(t, T):
-        return (np.cos((t / T + s) / (1 + s) * np.pi / 2)) ** 2
-
-    alphas = []
-    f0 = f(0, T)
-
-    for t in range(T + 1):
-        alphas.append(f(t, T) / f0)
-
-    betas = []
-
-    for t in range(1, T + 1):
-        betas.append(min(1 - alphas[t] / alphas[t - 1], 0.999))
-
-    return np.array(betas)
 
 
 def generate_linear_schedule(T, low, high):
     return np.linspace(low, high, T)
 
 
-def cosine_annealing_schedule(length_T, initial, final=0.001):
-    beta_schedual = initial * (final / initial) ** (0.5 * np.cos(np.pi * np.arange(length_T) / length_T))
+def cosine_annealing_schedule(length_T, initial_beta, final=0.001):
+    beta_schedual = initial_beta * (final / initial_beta) ** (0.5 * np.cos(np.pi * np.arange(length_T) / length_T))
+    beta_schedual = torch.from_numpy(beta_schedual)
     return beta_schedual
 
 
-T = 500
+def extract(a, t, x_shape):
+    batch_size = x_shape[0]
+    out = a.gather(-1, t.cpu())
+    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
+
+
+T = 1000
 initial = 0.1
 
 beta_array = cosine_annealing_schedule(T, initial)
-print(beta_array)
+alphas = 1.0 - beta_array
+alphas_cumprod = torch.cumprod(alphas, dim=0)
+sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
+sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
+
+
+def q_sample(x_start, t):
+    noise = torch.randn_like(x_start)
+    sqrt_alphas_cumprod_t = extract(sqrt_alphas_cumprod, t, x_start.shape)
+    sqrt_one_minus_alphas_cumprod_t = extract(
+        sqrt_one_minus_alphas_cumprod, t, x_start.shape
+    )
+    x_t = sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
+    return x_t
