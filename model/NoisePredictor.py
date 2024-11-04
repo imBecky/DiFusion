@@ -9,10 +9,11 @@ CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class GaussianDiffusion(nn.Module):
-    def __init__(self, model, betas,
+    def __init__(self, model, x_start, betas,
                  ema_decay=0.9999, ema_start=5000, ema_update_stride=1):
         super(GaussianDiffusion, self).__init__()
         self.model = model
+        self.x_start = x_start
         self.betas = betas
         self.ema_model = copy.deepcopy(model)
         self.ema = EMA(self.ema_decay)
@@ -24,9 +25,11 @@ class GaussianDiffusion(nn.Module):
         alphas = 1.0 - betas
         alphas_cumprod = torch.cumprod(alphas, dim=0)
         sqrt_alphas_prod = alphas_cumprod ** 0.5
+        sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
         self.register_buffer('betas', betas)
         self.register_buffer('alphas_cumprod', alphas_cumprod)
-        self.register_buffer('sqrt_alphas_prod', sqrt_alphas_prod)
+        self.register_buffer('sqrt_alphas_cumprod', sqrt_alphas_prod)
+        self.register_buffer('sqrt_one_minus_alphas_cumprod', sqrt_one_minus_alphas_cumprod)
 
     def update_ema(self):
         self.step += 1
@@ -36,12 +39,16 @@ class GaussianDiffusion(nn.Module):
             else:
                 self.ema.update_model_average(self.ema_model, self.model)
 
-    def add_noise(self, X0, t, noise):
-        """TODO: get noise in the def rather than get it """
-        sqrt_alphas_prod = self.sqrt_alphas_prod[:t]
-        sqrt_one_minus_alphas_prod = (1.0 - self.alphas_cumprod[:t]) ** 0.5
-        X_t = sqrt_alphas_prod * X0 + sqrt_one_minus_alphas_prod * noise
-        return X_t
+    def diffuse(self, x_start, t, noise):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        sqrt_alphas_cumprod_t = extract(self.sqrt_alphas_cumprod, t, x_start.shape)
+        sqrt_one_minus_alphas_cumprod_t = extract(
+            self.sqrt_one_minus_alphas_cumprod, t, x_start.shape
+        )
+        x_t = sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
+        return x_t
 
 
 def generate_linear_schedule(T, low, high):

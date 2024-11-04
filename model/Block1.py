@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torchvision.models import resnet50
 from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
@@ -58,7 +57,7 @@ class MyEncoder(nn.Module):
         super(MyEncoder, self).__init__()
         self.input_dim = input_dim
         self.encoder = self.gen_encoder()
-        self.reshape = Reshape((32, 32))
+        self.reshape = Reshape((1, 32, 32))
 
     def gen_encoder(self):
         encoder = resnet50(weights=ResNet50_Weights.DEFAULT).eval()
@@ -117,7 +116,7 @@ def GenerateEncoders(option=0):
         return encoder3
 
 
-def Train(dataloader_train, encoder, classifier, T, criterion, optimizer, epoch_num):
+def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, optimizer, epoch_num):
     print(encoder)
     for epoch in range(epoch_num):
         running_loss = 0.0
