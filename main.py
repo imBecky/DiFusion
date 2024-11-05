@@ -30,6 +30,7 @@ denoise_model = Unet(
     channels=channels,
     dim_mults=dim_mults
 )
+denoise_model = denoise_model.to(CUDA0)
 
 classifier = Classifier().to(CUDA0)
 criterion = nn.CrossEntropyLoss().to(CUDA0)

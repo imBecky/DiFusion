@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision.models import resnet50
 from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
 from data_loader.dataset import DatasetFromTensor
 import tqdm
 from .NoisePredictor import q_sample
+from utils.util import calculate_fid
 
 DATA_ROOT = './data/tensor'
 GT_PATH = './data/tensor/gt.pth'
@@ -117,7 +119,6 @@ def GenerateEncoders(option=0):
 
 
 def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, optimizer, epoch_num):
-    print(encoder)
     for epoch in range(epoch_num):
         running_loss = 0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
@@ -127,14 +128,15 @@ def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, 
             features = encoder(datas)
             batch_size = features.shape[0]
             t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
-            noised = q_sample(features, t)
-
-        #     output = classifier(features)
-        #     loss = criterion(output, label)
-        #     loss.backward()
-        #     optimizer.step()
-        #     running_loss += loss.item()
-        # print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader_train)}')
+            noise = torch.randn_like(features)
+            noised = q_sample(features, t, noise)
+            noise_hat = noise_predictor(noised, t)
+            loss = F.smooth_l1_loss(noise, noise_hat)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+            fid_score = calculate_fid(noise.cpu().detach().numpy(), noise_hat.cpu().detach().numpy())
+        print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader_train)}, FID: {fid_score}')
 
 
 def Test(dataloader_test, encoder, classifier):

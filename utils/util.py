@@ -5,6 +5,7 @@ import torch.nn as nn
 from inspect import isfunction
 import math
 from einops.layers.torch import Rearrange
+from scipy.linalg import sqrtm
 import torch.nn.functional as F
 HSI_SHAPE = (50, 4172, 1202)   # (band, width, height)
 new_shape = (50, 8344, 2404)
@@ -196,3 +197,20 @@ def Upsample(dim, dim_out=None):
         nn.Upsample(scale_factor=2, mode="nearest"),            # 先使用最近邻填充将数据在长宽上翻倍
         nn.Conv2d(dim, default(dim_out, dim), 3, padding=1),    # 再使用卷积对翻倍后的数据提取局部相关关系填充
     )
+
+
+def calculate_fid(act1, act2):
+    act1_flattened = act1.reshape(32, -1)
+    act2_flattened = act2.reshape(32, -1)
+    mu1, sigma1 = act1_flattened.mean(axis=0), np.cov(act1_flattened, rowvar=False)
+    mu2, sigma2 = act2_flattened.mean(axis=0), np.cov(act2_flattened, rowvar=False)
+
+    ssdiff = np.sum((mu1 - mu2) ** 2.0)
+    covmean = sqrtm(sigma1.dot(sigma2))
+
+    if np.iscomplexobj(covmean):
+        covmean = covmean.real
+
+    fid = ssdiff + np.trace(sigma1 + sigma2 - 2.0 * covmean)
+    return fid
+
