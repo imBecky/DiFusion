@@ -64,7 +64,7 @@ def cosine_annealing_schedule(length_T, initial_beta, final=0.001):
 
 def extract(a, t, x_shape):
     batch_size = x_shape[0]
-    out = a.gather(-1, t.cpu())
+    out = a.gather(-1, t)
     return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
 
 
@@ -82,10 +82,9 @@ posterior_variance = beta_array * (1. - alphas_cumprod_prev) / (1. - alphas_cump
 
 
 def q_sample(x_start, t, noise):
-    shape = x_start.shape.to(CUDA0)
-    sqrt_alphas_cumprod_t = extract(sqrt_alphas_cumprod, t, shape)
+    sqrt_alphas_cumprod_t = extract(sqrt_alphas_cumprod, t, x_start.shape)
     sqrt_one_minus_alphas_cumprod_t = extract(
-        sqrt_one_minus_alphas_cumprod, t, shape
+        sqrt_one_minus_alphas_cumprod, t, x_start.shape
     )
     x_t = sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
     x_t = x_t.float()
@@ -94,14 +93,15 @@ def q_sample(x_start, t, noise):
 
 def generate_single_X_0_hat(t_i, shape, noise_hat, alpha_t, beta_t,
                             sqrt_one_minus_alphas_cumprod_t_1,
-                            sqrt_one_minus_alphas_cumprod_t):
+                            sqrt_one_minus_alphas_cumprod_t,
+                            sqrt_recip_alphas_t):
     X_t = torch.randn(shape[1:]).to(CUDA0)
-    for j in range(t_i):
+    for j in range(t_i, 0, -1):
         if j == 0:
-            z = torch.zeros(shape)
+            z = torch.zeros(shape[1:]).to(CUDA0)
         else:
-            z = torch.randn(shape)
-        mu = sqrt_recip_alphas * (X_t - (1.0 - alpha_t) // sqrt_one_minus_alphas_cumprod * noise_hat)
+            z = torch.randn(shape[1:]).to(CUDA0)
+        mu = sqrt_recip_alphas_t * (X_t - (1.0 - alpha_t) // sqrt_one_minus_alphas_cumprod_t * noise_hat)
         sigma = torch.sqrt(beta_t) * sqrt_one_minus_alphas_cumprod_t_1 / sqrt_one_minus_alphas_cumprod_t
         X_t_1 = mu + sigma * z
         X_t = X_t_1
@@ -109,9 +109,8 @@ def generate_single_X_0_hat(t_i, shape, noise_hat, alpha_t, beta_t,
 
 
 def generate(shape, noise_hat, t):
-    print(t)
     batch_size = shape[0]
-    X_0s = []
+    X_0s = torch.tensor([]).to(CUDA0)
     """shape = (32, 1, 32, 32)"""
     X_t = torch.randn(shape)
     alpha_t = extract(alphas, t, shape)
@@ -123,8 +122,10 @@ def generate(shape, noise_hat, t):
         sqrt_one_minus_alphas_cumprod, t-1, shape
     )
     for i in range(batch_size):
-        X_0 = generate_single_X_0_hat(t[i], shape, noise_hat,alpha_t, beta_t,
-                                      sqrt_one_minus_alphas_cumprod_t_1,
-                                      sqrt_one_minus_alphas_cumprod_t)
+        X_0 = generate_single_X_0_hat(t[i], shape, noise_hat[i], alpha_t[i], beta_t[i],
+                                      sqrt_one_minus_alphas_cumprod_t_1[i],
+                                      sqrt_one_minus_alphas_cumprod_t[i],
+                                      sqrt_recip_alphas[i])
+        X_0 = torch.unsqueeze(X_0, dim=0)
         X_0s = torch.concatenate((X_0s, X_0))
     return X_0s

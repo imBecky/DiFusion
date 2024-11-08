@@ -132,6 +132,7 @@ def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, 
             noised = q_sample(features, t, noise)
             noise_hat = noise_predictor(noised, t)
             X_0_hat = generate(features.shape, noise_hat, t)
+            print(features.shape)
             print(X_0_hat.shape)
             loss = F.smooth_l1_loss(noise, noise_hat)
             loss.backward()
