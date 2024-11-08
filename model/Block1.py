@@ -18,6 +18,21 @@ LEARNING_RATE = 0.01
 IF_SMALL_BATCHES = True
 
 
+class CosineSimilarityLoss(nn.Module):
+    def __init__(self):
+        super(CosineSimilarityLoss, self).__init__()
+
+    def forward(self, input1, input2):
+        # 计算两个输入向量的点积
+        input1_normalized = F.normalize(input1, p=2, dim=1)
+        input2_normalized = F.normalize(input2, p=2, dim=1)
+        cosine_similarity = torch.sum(input1_normalized * input2_normalized, dim=1)
+
+        # 计算余弦相似度损失
+        loss = 1 - cosine_similarity
+        return loss.mean()  # 返回损失的平均值
+
+
 class Reshape(nn.Module):
     def __init__(self, new_shape):
         super(Reshape, self).__init__()
@@ -132,9 +147,9 @@ def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, 
             noised = q_sample(features, t, noise)
             noise_hat = noise_predictor(noised, t)
             X_0_hat = generate(features.shape, noise_hat, t)
-            print(features.shape)
-            print(X_0_hat.shape)
             loss = F.smooth_l1_loss(noise, noise_hat)
+            loss2 = criterion(features, X_0_hat)
+            loss += 0.5 * loss2
             loss.backward()
             optimizer.step()
             running_loss += loss.item()

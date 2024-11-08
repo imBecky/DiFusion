@@ -32,13 +32,14 @@ denoise_model = Unet(
 )
 denoise_model = denoise_model.to(CUDA0)
 
+
 classifier = Classifier().to(CUDA0)
-criterion = nn.CrossEntropyLoss().to(CUDA0)
+criterion = CosineSimilarityLoss().to(CUDA0)
 optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
 
-Train(data_loader_hsi_train, encoder_hsi, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
-# Train(data_loader_ndsm_train, encoder_ndsm, classifier, criterion, optimizer, CLS_EPOCH)
-# Train(data_loader_rgb_train, encoder_rgb, classifier, criterion, optimizer, CLS_EPOCH)
+# Train(data_loader_hsi_train, encoder_hsi, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
+# Train(data_loader_ndsm_train, encoder_ndsm, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
+Train(data_loader_rgb_train, encoder_rgb, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
 # Test(data_loader_rgb_test, encoder_rgb, classifier)
 
 

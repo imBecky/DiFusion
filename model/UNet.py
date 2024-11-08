@@ -36,7 +36,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
 class Block(nn.Module):
     def __init__(self, dim, dim_out, groups=8):
         super().__init__()
-        self.proj = WeightStandardizedConv2d(dim, dim_out, 3, padding=1)
+        self.proj = WeightStandardizedConv2d(dim, dim_out, (3, 3), padding=1)
         self.norm = nn.GroupNorm(groups, dim_out)
         self.act = nn.SiLU()
 
@@ -65,7 +65,7 @@ class ResnetBlock(nn.Module):
 
         self.block1 = Block(dim, dim_out, groups=groups)
         self.block2 = Block(dim_out, dim_out, groups=groups)
-        self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
+        self.res_conv = nn.Conv2d(dim, dim_out, (1, 1)) if dim != dim_out else nn.Identity()
 
     def forward(self, x, time_emb=None):
         scale_shift = None
@@ -85,8 +85,8 @@ class Attention(nn.Module):
         self.scale = dim_head**-0.5
         self.heads = heads
         hidden_dim = dim_head * heads
-        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
-        self.to_out = nn.Conv2d(hidden_dim, dim, 1)
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, (1, 1), bias=False)
+        self.to_out = nn.Conv2d(hidden_dim, dim, (1, 1))
 
     def forward(self, x):
         b, c, h, w = x.shape
@@ -111,9 +111,9 @@ class LinearAttention(nn.Module):
         self.scale = dim_head**-0.5
         self.heads = heads
         hidden_dim = dim_head * heads
-        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, (1, 1), bias=False)
 
-        self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, dim, 1),
+        self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, dim, (1, 1)),
                                     nn.GroupNorm(1, dim))
 
     def forward(self, x):
@@ -197,7 +197,7 @@ class Unet(nn.Module):
                         Residual(PreNorm(dim_in, LinearAttention(dim_in))),
                         Downsample(dim_in, dim_out)
                         if not is_last
-                        else nn.Conv2d(dim_in, dim_out, 3, padding=1),
+                        else nn.Conv2d(dim_in, dim_out, (3, 3), padding=1),
                     ]
                 )
             )
@@ -218,7 +218,7 @@ class Unet(nn.Module):
                         Residual(PreNorm(dim_out, LinearAttention(dim_out))),
                         Upsample(dim_out, dim_in)
                         if not is_last
-                        else nn.Conv2d(dim_out, dim_in, 3, padding=1),
+                        else nn.Conv2d(dim_out, dim_in, (3, 3), padding=1),
                     ]
                 )
             )
@@ -226,7 +226,7 @@ class Unet(nn.Module):
         self.out_dim = default(out_dim, channels)
 
         self.final_res_block = block_klass(dim * 2, dim, time_emb_dim=time_dim)
-        self.final_conv = nn.Conv2d(dim, self.out_dim, 1)
+        self.final_conv = nn.Conv2d(dim, self.out_dim, (1, 1))
 
     def forward(self, x, time, x_self_cond=None):
         if self.self_condition:
