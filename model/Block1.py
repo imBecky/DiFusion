@@ -6,7 +6,7 @@ from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
 from data_loader.dataset import DatasetFromTensor
 import tqdm
-from .NoisePredictor import q_sample
+from .NoisePredictor import q_sample, generate
 from utils.util import calculate_fid
 
 DATA_ROOT = './data/tensor'
@@ -126,13 +126,13 @@ def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, 
             datas, labels = datas.to(CUDA0), labels.to(CUDA0)
             datas = torch.permute(datas, (0, 3, 1, 2))    # pre_pose the channel dim (b, c, h, w)
             features = encoder(datas)
-            print(features.shape)
             batch_size = features.shape[0]
             t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
-            noise = torch.randn_like(features)
+            noise = torch.randn_like(features).to(CUDA0)
             noised = q_sample(features, t, noise)
             noise_hat = noise_predictor(noised, t)
-            print(noise_hat.shape)
+            X_0_hat = generate(features.shape, noise_hat, t)
+            print(X_0_hat.shape)
             loss = F.smooth_l1_loss(noise, noise_hat)
             loss.backward()
             optimizer.step()

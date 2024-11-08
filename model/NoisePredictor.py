@@ -71,7 +71,7 @@ def extract(a, t, x_shape):
 T = 1000
 initial = 0.1
 
-beta_array = cosine_annealing_schedule(T, initial)
+beta_array = cosine_annealing_schedule(T, initial).to(CUDA0)
 alphas = 1.0 - beta_array
 alphas_cumprod = torch.cumprod(alphas, dim=0)
 alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
@@ -82,16 +82,49 @@ posterior_variance = beta_array * (1. - alphas_cumprod_prev) / (1. - alphas_cump
 
 
 def q_sample(x_start, t, noise):
-    sqrt_alphas_cumprod_t = extract(sqrt_alphas_cumprod, t, x_start.shape)
+    shape = x_start.shape.to(CUDA0)
+    sqrt_alphas_cumprod_t = extract(sqrt_alphas_cumprod, t, shape)
     sqrt_one_minus_alphas_cumprod_t = extract(
-        sqrt_one_minus_alphas_cumprod, t, x_start.shape
+        sqrt_one_minus_alphas_cumprod, t, shape
     )
     x_t = sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
     x_t = x_t.float()
     return x_t
 
 
-def generate(shape, noise_hat, t):
-    """shape = (32, 1, 32, 32)"""
-    noise_batches = torch.randn(shape)
+def generate_single_X_0_hat(t_i, shape, noise_hat, alpha_t, beta_t,
+                            sqrt_one_minus_alphas_cumprod_t_1,
+                            sqrt_one_minus_alphas_cumprod_t):
+    X_t = torch.randn(shape[1:]).to(CUDA0)
+    for j in range(t_i):
+        if j == 0:
+            z = torch.zeros(shape)
+        else:
+            z = torch.randn(shape)
+        mu = sqrt_recip_alphas * (X_t - (1.0 - alpha_t) // sqrt_one_minus_alphas_cumprod * noise_hat)
+        sigma = torch.sqrt(beta_t) * sqrt_one_minus_alphas_cumprod_t_1 / sqrt_one_minus_alphas_cumprod_t
+        X_t_1 = mu + sigma * z
+        X_t = X_t_1
+    return X_t
 
+
+def generate(shape, noise_hat, t):
+    print(t)
+    batch_size = shape[0]
+    X_0s = []
+    """shape = (32, 1, 32, 32)"""
+    X_t = torch.randn(shape)
+    alpha_t = extract(alphas, t, shape)
+    beta_t = extract(beta_array, t, shape)
+    sqrt_one_minus_alphas_cumprod_t = extract(
+        sqrt_one_minus_alphas_cumprod, t, shape
+    )
+    sqrt_one_minus_alphas_cumprod_t_1 = extract(
+        sqrt_one_minus_alphas_cumprod, t-1, shape
+    )
+    for i in range(batch_size):
+        X_0 = generate_single_X_0_hat(t[i], shape, noise_hat,alpha_t, beta_t,
+                                      sqrt_one_minus_alphas_cumprod_t_1,
+                                      sqrt_one_minus_alphas_cumprod_t)
+        X_0s = torch.concatenate((X_0s, X_0))
+    return X_0s
