@@ -9,6 +9,22 @@ from utils.util import EMA
 CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+class Discriminator(nn.Module):
+    def __init__(self, input_size):
+        super(Discriminator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_size, 128),  # 输入层到隐藏层
+            nn.LeakyReLU(0.2),          # 激活函数
+            nn.Linear(128, 1),          # 隐藏层到输出层
+            nn.Sigmoid()                # 输出层激活函数，输出概率值
+        )
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)  # 展平图像
+        output = self.model(x)
+        return output
+
+
 class GaussianDiffusion(nn.Module):
     def __init__(self, model, x_start, betas,
                  ema_decay=0.9999, ema_start=5000, ema_update_stride=1):
