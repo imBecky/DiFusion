@@ -14,9 +14,9 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.model = nn.Sequential(
             nn.Linear(input_size, 128),  # 输入层到隐藏层
-            nn.LeakyReLU(0.2),          # 激活函数
-            nn.Linear(128, 1),          # 隐藏层到输出层
-            nn.Sigmoid()                # 输出层激活函数，输出概率值
+            nn.LeakyReLU(0.2),  # 激活函数
+            nn.Linear(128, 1),  # 隐藏层到输出层
+            nn.Sigmoid()  # 输出层激活函数，输出概率值
         )
 
     def forward(self, x):
@@ -26,14 +26,12 @@ class Discriminator(nn.Module):
 
 
 class GaussianDiffusion(nn.Module):
-    def __init__(self, model, x_start, betas,
+    def __init__(self, model, betas,
                  ema_decay=0.9999, ema_start=5000, ema_update_stride=1):
         super(GaussianDiffusion, self).__init__()
         self.model = model
-        self.x_start = x_start
-        self.betas = betas
         self.ema_model = copy.deepcopy(model)
-        self.ema = EMA(self.ema_decay)
+        self.ema = EMA(ema_decay)
         self.ema_decay = ema_decay
         self.ema_start = ema_start
         self.ema_update_stride = ema_update_stride
@@ -44,6 +42,7 @@ class GaussianDiffusion(nn.Module):
         sqrt_alphas_prod = alphas_cumprod ** 0.5
         sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
         self.register_buffer('betas', betas)
+        self.register_buffer('alphas', alphas)
         self.register_buffer('alphas_cumprod', alphas_cumprod)
         self.register_buffer('sqrt_alphas_cumprod', sqrt_alphas_prod)
         self.register_buffer('sqrt_one_minus_alphas_cumprod', sqrt_one_minus_alphas_cumprod)
@@ -65,7 +64,45 @@ class GaussianDiffusion(nn.Module):
             self.sqrt_one_minus_alphas_cumprod, t, x_start.shape
         )
         x_t = sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
+        x_t = x_t.float()
         return x_t
+
+    def generate_single(self, t_i, shape, noise_hat, alpha_t, beta_t,
+                        sqrt_one_minus_alphas_cumprod_t_1,
+                        sqrt_one_minus_alphas_cumprod_t,
+                        sqrt_recip_alphas_t
+                        ):
+        X_t = torch.randn(shape[1:]).to(CUDA0)
+        for j in range(t_i, 0, -1):
+            if j == 0:
+                z = torch.zeros(shape[1:]).to(CUDA0)
+            else:
+                z = torch.randn(shape[1:]).to(CUDA0)
+            mu = sqrt_recip_alphas_t * (X_t - (1.0 - alpha_t) // sqrt_one_minus_alphas_cumprod_t * noise_hat)
+            sigma = torch.sqrt(beta_t) * sqrt_one_minus_alphas_cumprod_t_1 / sqrt_one_minus_alphas_cumprod_t
+            X_t_1 = mu + sigma * z
+            X_t = X_t_1
+        return X_t
+
+    def generate(self, shape, epsilon, t):
+        batch_size = shape[0]
+        X_0_hats = torch.tensor([]).to(CUDA0)
+        alpha_t = extract(self.alphas, t, shape)
+        beta_t = extract(self.betas, t, shape)
+        sqrt_one_minus_alphas_cumprod_t = extract(
+            self.sqrt_one_minus_alphas_cumprod, t, shape
+        )
+        sqrt_one_minus_alphas_cumprod_t_1 = extract(
+            self.sqrt_one_minus_alphas_cumprod, t - 1, shape
+        )
+        for i in range(batch_size):
+            X_0 = generate_single_X_0_hat(t[i], shape, epsilon[i], alpha_t[i], beta_t[i],
+                                          sqrt_one_minus_alphas_cumprod_t_1[i],
+                                          sqrt_one_minus_alphas_cumprod_t[i],
+                                          sqrt_recip_alphas[i])
+            X_0 = torch.unsqueeze(X_0, dim=0)
+            X_0_hats = torch.concatenate((X_0_hats, X_0))
+        return X_0_hats
 
 
 def generate_linear_schedule(T, low, high):
@@ -93,7 +130,7 @@ alphas_cumprod = torch.cumprod(alphas, dim=0)
 alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
 sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
 sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
-sqrt_recip_alphas = torch.sqrt(1.0/alphas)
+sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
 posterior_variance = beta_array * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
 
 
@@ -135,7 +172,7 @@ def generate(shape, noise_hat, t):
         sqrt_one_minus_alphas_cumprod, t, shape
     )
     sqrt_one_minus_alphas_cumprod_t_1 = extract(
-        sqrt_one_minus_alphas_cumprod, t-1, shape
+        sqrt_one_minus_alphas_cumprod, t - 1, shape
     )
     for i in range(batch_size):
         X_0 = generate_single_X_0_hat(t[i], shape, noise_hat[i], alpha_t[i], beta_t[i],

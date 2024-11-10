@@ -1,6 +1,6 @@
 from model.Block1 import *
 from torch import optim
-from model.NoisePredictor import Discriminator
+from model.NoisePredictor import Discriminator, GaussianDiffusion, cosine_annealing_schedule
 from model.UNet import Unet
 import torch
 
@@ -8,7 +8,7 @@ DATA_ROOT = './data/tensor'
 GT_PATH = './data/tensor/gt.pth'
 CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLS_EPOCH = 30
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 LEARNING_RATE = 0.005
 T = 1000
 image_size = 32
@@ -29,12 +29,14 @@ encoder_hsi = GenerateEncoders(1)
 encoder_ndsm = GenerateEncoders(2)
 encoder_rgb = GenerateEncoders(3)
 
-denoise_model = Unet(
+noise_predictor = Unet(
     dim=image_size,
     channels=channels,
     dim_mults=dim_mults
 )
-denoise_model = denoise_model.to(CUDA0)
+noise_predictor = noise_predictor.to(CUDA0)
+beta_array = cosine_annealing_schedule(T, 0.1).to(CUDA0)
+GaussianDiffuser = GaussianDiffusion(noise_predictor, beta_array)
 
 
 classifier = Classifier().to(CUDA0)
@@ -42,7 +44,7 @@ criterion = CosineSimilarityLoss().to(CUDA0)
 optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
 
 # Train(data_loader_hsi_train, encoder_hsi, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
-Train(data_loader_ndsm_train, encoder_ndsm, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
+Train(data_loader_ndsm_train, encoder_ndsm, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
 # Train(data_loader_rgb_train, encoder_rgb, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
 # Test(data_loader_rgb_test, encoder_rgb, classifier)
 

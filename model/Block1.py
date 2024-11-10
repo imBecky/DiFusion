@@ -133,7 +133,7 @@ def GenerateEncoders(option=0):
         return encoder3
 
 
-def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, optimizer, epoch_num):
+def Train(dataloader_train, encoder, GaussianDiffuser, classifier, T, criterion, optimizer, epoch_num):
     for epoch in range(epoch_num):
         running_loss = 0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
@@ -144,12 +144,10 @@ def Train(dataloader_train, encoder, noise_predictor, classifier, T, criterion, 
             batch_size = features.shape[0]
             t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
             noise = torch.randn_like(features).to(CUDA0)
-            noised = q_sample(features, t, noise)
-            noise_hat = noise_predictor(noised, t)
-            X_0_hat = generate(features.shape, noise_hat, t)
+            noised = GaussianDiffuser.diffuse(features, t, noise)
+            noise_hat = GaussianDiffuser.model(noised, t)
+            X_0_hat = GaussianDiffuser.generate(features.shape, noise_hat, t)
             loss = F.smooth_l1_loss(noise, noise_hat)
-            loss2 = criterion(features, X_0_hat)
-            loss += 0.5 * loss2
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
