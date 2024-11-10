@@ -6,7 +6,6 @@ from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
 from data_loader.dataset import DatasetFromTensor
 import tqdm
-from .NoisePredictor import q_sample, generate
 from utils.util import calculate_fid
 
 DATA_ROOT = './data/tensor'
