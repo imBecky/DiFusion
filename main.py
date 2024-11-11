@@ -16,9 +16,6 @@ channels = 1
 IF_SMALL_BATCHES = True
 dim_mults = (1, 2, 4,)
 
-input_size = 28 * 28
-discriminator = Discriminator(input_size)
-
 
 dataset_hsi, dataset_ndsm, dataset_rgb = GenerateDatasets(DATA_ROOT)
 data_loader_hsi_train, data_loader_hsi_test = SpliteDataset(dataset_hsi, BATCH_SIZE, 0.8)
@@ -36,16 +33,15 @@ noise_predictor = Unet(
 )
 noise_predictor = noise_predictor.to(CUDA0)
 beta_array = cosine_annealing_schedule(T, 0.1).to(CUDA0)
-GaussianDiffuser = GaussianDiffusion(noise_predictor, beta_array)
-
-
+discriminator = Discriminator().to(CUDA0)
 classifier = Classifier().to(CUDA0)
 criterion = CosineSimilarityLoss().to(CUDA0)
 optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
+GaussianDiffuser = GaussianDiffusion(noise_predictor, discriminator, classifier, beta_array)
 
-# Train(data_loader_hsi_train, encoder_hsi, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
+# Train(data_loader_hsi_train, encoder_hsi, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
 Train(data_loader_ndsm_train, encoder_ndsm, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
-# Train(data_loader_rgb_train, encoder_rgb, denoise_model, classifier, T, criterion, optimizer, CLS_EPOCH)
+# Train(data_loader_rgb_train, encoder_rgb, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
 # Test(data_loader_rgb_test, encoder_rgb, classifier)
 
 

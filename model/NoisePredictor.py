@@ -10,27 +10,40 @@ CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Discriminator(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self):
         super(Discriminator, self).__init__()
+        # 定义判别器的网络结构
         self.model = nn.Sequential(
-            nn.Linear(input_size, 128),  # 输入层到隐藏层
-            nn.LeakyReLU(0.2),  # 激活函数
-            nn.Linear(128, 1),  # 隐藏层到输出层
-            nn.Sigmoid()  # 输出层激活函数，输出概率值
+            nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2), padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(512, 1, kernel_size=(3, 3), stride=(2, 2), padding=1),
+            nn.Sigmoid()
         )
 
     def forward(self, x):
-        x = x.view(x.size(0), -1)  # 展平图像
+        # 前向传播
+        x = x.float()
         output = self.model(x)
-        return output
+        return output.view(-1, 1)
 
 
 class GaussianDiffusion(nn.Module):
-    def __init__(self, model, betas,
+    def __init__(self, noise_predictor, modality_discriminator, classifier, betas,
                  ema_decay=0.9999, ema_start=5000, ema_update_stride=1):
         super(GaussianDiffusion, self).__init__()
-        self.model = model
-        self.ema_model = copy.deepcopy(model)
+        self.noise_predictor = noise_predictor
+        self.modality_discriminator = modality_discriminator
+        self.classfier = classifier
+        self.ema_model = copy.deepcopy(noise_predictor)
         self.ema = EMA(ema_decay)
         self.ema_decay = ema_decay
         self.ema_start = ema_start
@@ -55,7 +68,7 @@ class GaussianDiffusion(nn.Module):
             if self.step < self.ema_start:
                 pass
             else:
-                self.ema.update_model_average(self.ema_model, self.model)
+                self.ema.update_model_average(self.ema_model, self.noise_predictor)
 
     def diffuse(self, x_start, t, noise):
         if noise is None:

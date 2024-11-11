@@ -144,8 +144,11 @@ def Train(dataloader_train, encoder, GaussianDiffuser, classifier, T, criterion,
             t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
             noise = torch.randn_like(features).to(CUDA0)
             noised = GaussianDiffuser.diffuse(features, t, noise)
-            noise_hat = GaussianDiffuser.model(noised, t)
+            noise_hat = GaussianDiffuser.noise_predictor(noised, t)
             X_0_hat = GaussianDiffuser.generate(features.shape, noise_hat, t)
+            modality = 0
+            modality_hat = GaussianDiffuser.modality_discriminator(X_0_hat)
+            print(modality_hat.shape)
             loss = F.smooth_l1_loss(noise, noise_hat)
             loss.backward()
             optimizer.step()
