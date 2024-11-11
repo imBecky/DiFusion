@@ -37,9 +37,13 @@ class Discriminator(nn.Module):
 
 
 class GaussianDiffusion(nn.Module):
-    def __init__(self, noise_predictor, modality_discriminator, classifier, betas,
+    def __init__(self, encoder_hsi, encoder_ndsm, encoder_rgb,
+                 noise_predictor, modality_discriminator, classifier, betas,
                  ema_decay=0.9999, ema_start=5000, ema_update_stride=1):
         super(GaussianDiffusion, self).__init__()
+        self.encoder_hsi = encoder_hsi
+        self.encoder_ndsm = encoder_ndsm
+        self.encoder_rgb = encoder_rgb
         self.noise_predictor = noise_predictor
         self.modality_discriminator = modality_discriminator
         self.classfier = classifier

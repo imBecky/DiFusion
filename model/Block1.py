@@ -102,10 +102,8 @@ def GenerateDatasets(root):
     data_rgb = torch.load(root + '/rgb.pth', weights_only=False)
     gt = torch.load(root + '/gt.pth', weights_only=False)
 
-    dataset_hsi = DatasetFromTensor(data_hsi, gt, small_batches=IF_SMALL_BATCHES)
-    dataset_ndsm = DatasetFromTensor(data_ndsm, gt, small_batches=IF_SMALL_BATCHES)
-    dataset_rgb = DatasetFromTensor(data_rgb, gt, small_batches=IF_SMALL_BATCHES)
-    return dataset_hsi, dataset_ndsm, dataset_rgb
+    dataset = DatasetFromTensor(data_hsi, data_ndsm, data_rgb, gt, small_batches=IF_SMALL_BATCHES)
+    return dataset
 
 
 def GenerateDataLoaders(hsi, ndsm, rgb):
@@ -132,20 +130,23 @@ def GenerateEncoders(option=0):
         return encoder3
 
 
-def Train(dataloader_train, encoder, GaussianDiffuser, classifier, T, criterion, optimizer, epoch_num):
+def Train(dataloader_train, GaussianDiffuser, classifier, T, criterion, optimizer, epoch_num):
     for epoch in range(epoch_num):
         running_loss = 0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
-        for step, (datas, labels) in loop:
-            datas, labels = datas.to(CUDA0), labels.to(CUDA0)
-            datas = torch.permute(datas, (0, 3, 1, 2))    # pre_pose the channel dim (b, c, h, w)
-            features = encoder(datas)
-            batch_size = features.shape[0]
+        for step, patch in loop:
+            hsi, ndsm, rgb, label = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0),\
+                                    patch['rgb'].to(CUDA0), patch['label'].to(CUDA0)
+            # pre_pose the channel dim (b, c, h, w)
+            permuted_tensors = [tensor.permute(0, 3, 1, 2) for tensor in [hsi, ndsm, rgb]]
+            hsi, ndsm, rgb = permuted_tensors
+            hsi_features = GaussianDiffuser.encoder_hsi(hsi)
+            batch_size = hsi_features.shape[0]
             t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
-            noise = torch.randn_like(features).to(CUDA0)
-            noised = GaussianDiffuser.diffuse(features, t, noise)
+            noise = torch.randn_like(hsi_features).to(CUDA0)
+            noised = GaussianDiffuser.diffuse(hsi_features, t, noise)
             noise_hat = GaussianDiffuser.noise_predictor(noised, t)
-            X_0_hat = GaussianDiffuser.generate(features.shape, noise_hat, t)
+            X_0_hat = GaussianDiffuser.generate(hsi_features.shape, noise_hat, t)
             modality = 0
             modality_hat = GaussianDiffuser.modality_discriminator(X_0_hat)
             print(modality_hat.shape)

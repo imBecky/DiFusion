@@ -17,10 +17,8 @@ IF_SMALL_BATCHES = True
 dim_mults = (1, 2, 4,)
 
 
-dataset_hsi, dataset_ndsm, dataset_rgb = GenerateDatasets(DATA_ROOT)
-data_loader_hsi_train, data_loader_hsi_test = SpliteDataset(dataset_hsi, BATCH_SIZE, 0.8)
-data_loader_ndsm_train, data_loader_ndsm_test = SpliteDataset(dataset_ndsm, BATCH_SIZE, 0.8)
-data_loader_rgb_train, data_loader_rgb_test = SpliteDataset(dataset_rgb, BATCH_SIZE, 0.8)
+dataset = GenerateDatasets(DATA_ROOT)
+data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 
 encoder_hsi = GenerateEncoders(1)
 encoder_ndsm = GenerateEncoders(2)
@@ -37,11 +35,10 @@ discriminator = Discriminator().to(CUDA0)
 classifier = Classifier().to(CUDA0)
 criterion = CosineSimilarityLoss().to(CUDA0)
 optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
-GaussianDiffuser = GaussianDiffusion(noise_predictor, discriminator, classifier, beta_array)
+GaussianDiffuser = GaussianDiffusion(encoder_hsi, encoder_ndsm, encoder_rgb, noise_predictor,
+                                     discriminator, classifier, beta_array)
 
-# Train(data_loader_hsi_train, encoder_hsi, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
-Train(data_loader_ndsm_train, encoder_ndsm, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
-# Train(data_loader_rgb_train, encoder_rgb, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
-# Test(data_loader_rgb_test, encoder_rgb, classifier)
+Train(data_loader_train, GaussianDiffuser, classifier, T, criterion, optimizer, CLS_EPOCH)
+# Test(data_loader_test, encoder_rgb, classifier)
 
 

@@ -5,9 +5,11 @@ SMALL_PATCH_NUM = 992
 
 
 class DatasetFromTensor(data.Dataset):
-    def __init__(self, inputs, labels, stride=(2, 2), patch_size=(32, 32), transform=None, small_batches=False):
+    def __init__(self, hsi, ndsm, rgb, labels, stride=(2, 2), patch_size=(32, 32), transform=None, small_batches=False):
         super(DatasetFromTensor, self).__init__()
-        self.inputs = inputs.float()
+        self.hsi = hsi.float()
+        self.ndsm = ndsm.float()
+        self.rgb = rgb.float()
         self.labels = labels
         self.stride = stride
         self.patch_size = patch_size
@@ -20,15 +22,18 @@ class DatasetFromTensor(data.Dataset):
         patches = []
         stride_x, stride_y = self.stride
         patch_width, patch_height = self.patch_size
-        width, height = self.inputs.shape[:2]
+        width, height = self.hsi.shape[:2]
         for y in range(0, height-patch_height+1, stride_y):
+            patch = {}
             if self.small_batches is True and count >= SMALL_PATCH_NUM:
                 break
             for x in range(0, width-patch_width+1, stride_x):
                 if self.small_batches is True and count >= SMALL_PATCH_NUM:
                     break
-                patch = self.inputs[x:x + patch_width, y:y + patch_height, :], \
-                        torch.tensor(self.labels[x:x + patch_width, y:y + patch_height], dtype=torch.float)
+                patch['hsi'] = self.hsi[x:x + patch_width, y:y + patch_height, :]
+                patch['ndsm'] = self.ndsm[x:x + patch_width, y:y + patch_height, :]
+                patch['rgb'] = self.rgb[x:x + patch_width, y:y + patch_height, :]
+                patch['label'] = torch.tensor(self.labels[x:x + patch_width, y:y + patch_height], dtype=torch.float)
                 patches.append(patch)
                 count += 1
         return patches
