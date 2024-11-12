@@ -7,14 +7,7 @@ from torch.utils.data import DataLoader, random_split
 from data_loader.dataset import DatasetFromTensor
 import tqdm
 from utils.util import calculate_fid
-
-DATA_ROOT = './data/tensor'
-GT_PATH = './data/tensor/gt.pth'
-CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CLS_EPOCH = 30
-BATCH_SIZE = 32
-LEARNING_RATE = 0.01
-IF_SMALL_BATCHES = True
+from params import *
 
 
 class CosineSimilarityLoss(nn.Module):
@@ -55,11 +48,11 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.model = nn.Sequential(
             nn.Linear(1000, 16*16),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.BatchNorm1d(16*16),
             nn.Dropout(0.5),
             nn.Linear(16*16, 32*32),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             Reshape((32, 32))
         )
 
@@ -130,29 +123,38 @@ def GenerateEncoders(option=0):
         return encoder3
 
 
-def Train(dataloader_train, GaussianDiffuser, classifier, T, criterion, optimizer, epoch_num):
+def get_modalities(patch):
+    hsi, ndsm, rgb, label = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0),\
+                            patch['rgb'].to(CUDA0), patch['label'].to(CUDA0)
+    permuted_tensors = [tensor.permute(0, 3, 1, 2) for tensor in [hsi, ndsm, rgb]]
+    hsi, ndsm, rgb = permuted_tensors
+    return hsi, ndsm, rgb, label
+
+
+def encode_modalities(hsi, ndsm, rgb, GaussianDiffuser):
+    hsi_features = GaussianDiffuser.encoder_hsi(hsi)
+    ndsm_features = GaussianDiffuser.encoder_ndsm(ndsm)
+    rgb_features = GaussianDiffuser.encoder_rgb(rgb)
+    return hsi_features, ndsm_features, rgb_features
+
+
+def Train(dataloader_train, GaussianDiffuser, classifier, T, epoch_num):
     for epoch in range(epoch_num):
         running_loss = 0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
         for step, patch in loop:
-            hsi, ndsm, rgb, label = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0),\
-                                    patch['rgb'].to(CUDA0), patch['label'].to(CUDA0)
-            # pre_pose the channel dim (b, c, h, w)
-            permuted_tensors = [tensor.permute(0, 3, 1, 2) for tensor in [hsi, ndsm, rgb]]
-            hsi, ndsm, rgb = permuted_tensors
-            hsi_features = GaussianDiffuser.encoder_hsi(hsi)
-            batch_size = hsi_features.shape[0]
-            t = torch.randint(0, T, (batch_size,), device=CUDA0).long()
+            hsi, ndsm, rgb, label = get_modalities(patch)
+            hsi_features, ndsm_features, rgb_features = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            t = torch.randint(0, T, (BATCH_SIZE,), device=CUDA0).long()
             noise = torch.randn_like(hsi_features).to(CUDA0)
             noised = GaussianDiffuser.diffuse(hsi_features, t, noise)
             noise_hat = GaussianDiffuser.noise_predictor(noised, t)
             X_0_hat = GaussianDiffuser.generate(hsi_features.shape, noise_hat, t)
             modality = 0
             modality_hat = GaussianDiffuser.modality_discriminator(X_0_hat)
-            print(modality_hat.shape)
-            loss = F.smooth_l1_loss(noise, noise_hat)
+            loss = GaussianDiffuser.noise_predictor_criterion(noise, noise_hat)
             loss.backward()
-            optimizer.step()
+            GaussianDiffuser.noise_predictor_optimizer.step()
             running_loss += loss.item()
             fid_score = calculate_fid(noise.cpu().detach().numpy(), noise_hat.cpu().detach().numpy())
         print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader_train)}, FID: {fid_score}')
