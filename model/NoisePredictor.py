@@ -38,28 +38,34 @@ class Discriminator(nn.Module):
 
 class GaussianDiffusion(nn.Module):
     def __init__(self, encoder_hsi, encoder_ndsm, encoder_rgb,
-                 noise_predictor, modality_discriminator, classifier,
+                 noise_predictor_hsi, noise_predictor_ndsm, noise_predictor_rgb,
+                 modality_discriminator, classifier,
                  noise_predictor_criterion, discriminator_criterion, classifier_criterion,
-                 noise_predictor_optimizer, discriminator_optimizer, classifier_optimizer,
+                 noise_predictor_optimizer_hsi, noise_predictor_optimizer_ndsm, noise_predictor_optimizer_rgb,
+                 discriminator_optimizer, classifier_optimizer,
                  betas, ema_decay=0.9999, ema_start=5000, ema_update_stride=1):
         super(GaussianDiffusion, self).__init__()
         self.encoder_hsi = encoder_hsi
         self.encoder_ndsm = encoder_ndsm
         self.encoder_rgb = encoder_rgb
-        self.noise_predictor = noise_predictor
+        self.noise_predictor_hsi = noise_predictor_hsi
+        self.noise_predictor_ndsm = noise_predictor_ndsm
+        self.noise_predictor_rgb = noise_predictor_rgb
         self.modality_discriminator = modality_discriminator
         self.classifier = classifier
         self.noise_predictor_criterion = noise_predictor_criterion
         self.discriminator_criterion = discriminator_criterion
         self.classifier_criterion = classifier_criterion
-        self.noise_predictor_optimizer = noise_predictor_optimizer
+        self.noise_predictor_optimizer_hsi = noise_predictor_optimizer_hsi
+        self.noise_predictor_optimizer_ndsm = noise_predictor_optimizer_ndsm
+        self.noise_predictor_optimizer_rgb = noise_predictor_optimizer_rgb
         self.discriminator_optimizer = discriminator_optimizer
         self.classifier_optimizer = classifier_optimizer
-        self.ema_model = copy.deepcopy(noise_predictor)
-        self.ema = EMA(ema_decay)
-        self.ema_decay = ema_decay
-        self.ema_start = ema_start
-        self.ema_update_stride = ema_update_stride
+        # self.ema_model = copy.deepcopy(noise_predictor)
+        # self.ema = EMA(ema_decay)
+        # self.ema_decay = ema_decay
+        # self.ema_start = ema_start
+        # self.ema_update_stride = ema_update_stride
         self.step = 0
 
         alphas = 1.0 - betas
@@ -74,13 +80,13 @@ class GaussianDiffusion(nn.Module):
         self.register_buffer('sqrt_one_minus_alphas_cumprod', sqrt_one_minus_alphas_cumprod)
         self.register_buffer('sqrt_recip_alphas', sqrt_recip_alphas)
 
-    def update_ema(self):
-        self.step += 1
-        if self.step % self.ema_update_stride == 0:
-            if self.step < self.ema_start:
-                pass
-            else:
-                self.ema.update_model_average(self.ema_model, self.noise_predictor)
+    # def update_ema(self):
+    #     self.step += 1
+    #     if self.step % self.ema_update_stride == 0:
+    #         if self.step < self.ema_start:
+    #             pass
+    #         else:
+    #             self.ema.update_model_average(self.ema_model, self.noise_predictor)
 
     def diffuse(self, x_start, t, noise):
         if noise is None:

@@ -132,32 +132,44 @@ def get_modalities(patch):
 
 
 def encode_modalities(hsi, ndsm, rgb, GaussianDiffuser):
-    hsi_features = GaussianDiffuser.encoder_hsi(hsi)
-    ndsm_features = GaussianDiffuser.encoder_ndsm(ndsm)
-    rgb_features = GaussianDiffuser.encoder_rgb(rgb)
-    return hsi_features, ndsm_features, rgb_features
+    feature_hsi = GaussianDiffuser.encoder_hsi(hsi)
+    feature_ndsm = GaussianDiffuser.encoder_ndsm(ndsm)
+    feature_rgb = GaussianDiffuser.encoder_rgb(rgb)
+    return feature_hsi, feature_ndsm, feature_rgb
 
 
 def Train(dataloader_train, GaussianDiffuser, classifier, T, epoch_num):
     for epoch in range(epoch_num):
-        running_loss = 0.0
+        running_predictor1_loss = 0.0
+        running_predictor2_loss = 0.0
+        running_predictor3_loss = 0.0
+        running_discriminator_loss = 0.0
+        running_classification_loss = 0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
         for step, patch in loop:
             hsi, ndsm, rgb, label = get_modalities(patch)
-            hsi_features, ndsm_features, rgb_features = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            feature_hsi, feature_ndsm, feature_rgb = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
             t = torch.randint(0, T, (BATCH_SIZE,), device=CUDA0).long()
-            noise = torch.randn_like(hsi_features).to(CUDA0)
-            noised = GaussianDiffuser.diffuse(hsi_features, t, noise)
-            noise_hat = GaussianDiffuser.noise_predictor(noised, t)
-            X_0_hat = GaussianDiffuser.generate(hsi_features.shape, noise_hat, t)
-            modality = 0
-            modality_hat = GaussianDiffuser.modality_discriminator(X_0_hat)
-            loss = GaussianDiffuser.noise_predictor_criterion(noise, noise_hat)
-            loss.backward()
+            # abstract hsi feature with noise predictor
+            noise_hsi = torch.randn_like(feature_hsi).to(CUDA0)
+            noised_hsi = GaussianDiffuser.diffuse(feature_hsi, t, noise_hsi)
+            noise_hsi_hat = GaussianDiffuser.noise_predictor(noised_hsi, t)
+            noise_predictor_hsi_loss = GaussianDiffuser.noise_predictor_criterion(noise_hsi, noise_hsi_hat)
+            feature_hsi_hat = GaussianDiffuser.generate(feature_hsi.shape, noise_hsi_hat, t)
+            modality_hsi = torch.tensor(1, device=CUDA0)
+            modality_hsi_hat = GaussianDiffuser.discriminator(feature_hsi_hat)
+            label_hsi_hat = GaussianDiffuser.classifier(feature_hsi_hat)
+            """
+            To do: the calculation of adversarial loss isn't right!!!!
+                   set the formula of losses, including lambda!!!
+            """
+            # adversarial_loss_hsi = GaussianDiffuser.discriminator_criterion(modality_hsi, modality_hsi_hat)
+            classification_loss_hsi = GaussianDiffuser.classifier_criterion(label, label_hsi_hat)
+            running_classification_loss += classification_loss_hsi
+            noise_predictor_hsi_loss.backward()
             GaussianDiffuser.noise_predictor_optimizer.step()
-            running_loss += loss.item()
-            fid_score = calculate_fid(noise.cpu().detach().numpy(), noise_hat.cpu().detach().numpy())
-        print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader_train)}, FID: {fid_score}')
+            fid_score = calculate_fid(noise_hsi.cpu().detach().numpy(), noise_hsi_hat.cpu().detach().numpy())
+        print(f'Epoch {epoch + 1}, Loss: {running_classification_loss / len(dataloader_train)}, FID: {fid_score}')
 
 
 def Test(dataloader_test, encoder, classifier):
