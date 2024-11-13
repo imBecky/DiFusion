@@ -19,6 +19,7 @@ beta_array = cosine_annealing_schedule(T, 0.1)
 discriminator = Discriminator()
 classifier = Classifier()
 noise_predictor_criterion = F.smooth_l1_loss
+generate_criterion = nn.CrossEntropyLoss()
 discriminator_criterion = CosineSimilarityLoss()
 classifier_criterion = CosineSimilarityLoss()
 noise_predictor_optimizer_hsi = optim.Adam(noise_predictor_hsi.parameters(), lr=LEARNING_RATE1)
@@ -30,14 +31,17 @@ classifier_optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE3)
 GaussianDiffuser = GaussianDiffusion(encoder_hsi, encoder_ndsm, encoder_rgb,
                                      noise_predictor_hsi, noise_predictor_ndsm, noise_predictor_rgb,
                                      discriminator, classifier,
-                                     noise_predictor_criterion, discriminator_criterion, classifier_criterion,
+                                     noise_predictor_criterion,
+                                     generate_criterion,
+                                     discriminator_criterion,
+                                     classifier_criterion,
                                      noise_predictor_optimizer_hsi,
                                      noise_predictor_optimizer_ndsm,
                                      noise_predictor_optimizer_rgb,
                                      discriminator_optimizer, classifier_optimizer,
                                      beta_array)
 GaussianDiffuser = GaussianDiffuser.to(CUDA0)
-Train(data_loader_train, GaussianDiffuser, classifier, T, CLS_EPOCH)
+Train(data_loader_train, GaussianDiffuser, CLS_EPOCH)
 # Test(data_loader_test, encoder_rgb, classifier)
 
 
