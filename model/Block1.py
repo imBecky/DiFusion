@@ -169,7 +169,7 @@ def block2(GaussianDiffuser, t,
            feature_hsi, feature_ndsm, feature_rgb, label,
            noised_hsi, noised_ndsm, noised_rgb):
     # Train the discriminator
-    d_loss = 0.0
+    d_loss = torch.tensor(0.).to(CUDA0)
     GaussianDiffuser.discriminator_optimizer.zero_grad()
     for i, name in enumerate(['hsi', 'ndsm', 'rgb']):
         noised_x_t = locals()['noised_'+name]
@@ -177,10 +177,11 @@ def block2(GaussianDiffuser, t,
         d_labels = torch.full((BATCH_SIZE, 1), i, dtype=torch.float32).to(CUDA0)
         output_fake = GaussianDiffuser.discriminator(feature_hat.detach().to(CUDA0))
         d_loss_i = GaussianDiffuser.discriminator_criterion(output_fake, d_labels)
-        d_loss_i.backward()
         d_loss += d_loss_i
+    d_loss /= 3
+    d_loss.backward()
     GaussianDiffuser.discriminator_optimizer.step()
-    g_loss = 0.0
+    g_loss = []
     for i, name in enumerate(['hsi', 'ndsm', 'rgb']):
         optimizer = getattr(GaussianDiffuser, 'noise_predictor_optimizer_'+name)
         optimizer.zero_grad()
@@ -188,9 +189,8 @@ def block2(GaussianDiffuser, t,
         g_labels = torch.full((BATCH_SIZE,), i, dtype=torch.long).to(CUDA0)
         feature_hat = generate_feature(GaussianDiffuser, name, noised_x_t, t)
         outputs_fake = GaussianDiffuser.discriminator(feature_hat)
-        g_loss_i = GaussianDiffuser.generate_criterion(outputs_fake, g_labels)
-        g_loss += g_loss_i
-        g_loss_i.backward()
+        g_loss.append(GaussianDiffuser.generate_criterion(outputs_fake, g_labels))
+        g_loss[i].backward(retain_graph=(i!=2))
         optimizer.step()
     return d_loss, g_loss
 
