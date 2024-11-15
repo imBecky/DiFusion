@@ -149,7 +149,7 @@ def noise_predictor_trainer(GaussianDiffuser, t,
         optimizer.zero_grad()
         noise = torch.randn_like(feature).to(CUDA0)
         X_t = GaussianDiffuser.diffuse(feature, t, noise)
-        noised_features.append(X_t)
+        noised_features.append(X_t.detach())
         predicted_noise = noise_predictor(X_t, t)
         loss_i = GaussianDiffuser.noise_predictor_criterion(predicted_noise, noise)
         losses.append(loss_i)

@@ -27,6 +27,12 @@ noise_predictor_optimizer_ndsm = optim.Adam(noise_predictor_ndsm.parameters(), l
 noise_predictor_optimizer_rgb = optim.Adam(noise_predictor_rgb.parameters(), lr=LEARNING_RATE1)
 discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=LEARNING_RATE2)
 classifier_optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE3)
+for i, model in enumerate([encoder_rgb, encoder_hsi, encoder_ndsm,
+                           noise_predictor_hsi, noise_predictor_ndsm, noise_predictor_rgb,
+                           discriminator, classifier]):
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print(f'模型总参数数量: {num_params}')
 
 GaussianDiffuser = GaussianDiffusion(encoder_hsi, encoder_ndsm, encoder_rgb,
                                      noise_predictor_hsi, noise_predictor_ndsm, noise_predictor_rgb,
