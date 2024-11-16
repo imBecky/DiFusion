@@ -47,7 +47,7 @@ GaussianDiffuser = GaussianDiffusion(encoder_hsi, encoder_ndsm, encoder_rgb,
                                      discriminator_optimizer, classifier_optimizer,
                                      beta_array)
 GaussianDiffuser = GaussianDiffuser.to(CUDA0)
-Train(data_loader_train, GaussianDiffuser, CLS_EPOCH)
+Train(data_loader_train, GaussianDiffuser, CLS_EPOCH, stage=1)  # stage1:encode, stage2:afterwards
 # Test(data_loader_test, encoder_rgb, classifier)
 
 

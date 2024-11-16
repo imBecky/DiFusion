@@ -135,7 +135,10 @@ def encode_modalities(hsi, ndsm, rgb, GaussianDiffuser):
     feature_hsi = GaussianDiffuser.encoder_hsi(hsi)
     feature_ndsm = GaussianDiffuser.encoder_ndsm(ndsm)
     feature_rgb = GaussianDiffuser.encoder_rgb(rgb)
-    return feature_hsi, feature_ndsm, feature_rgb
+    torch.save(feature_hsi, './data/tensor/features/hsi.pth')
+    torch.save(feature_ndsm, './data/tensor/features/ndsm.pth')
+    torch.save(feature_rgb, './data/tensor/features/rgb.pth')
+    print('encoded features saved!!!')
 
 
 def noise_predictor_trainer(GaussianDiffuser, t,
@@ -195,14 +198,16 @@ def block2(GaussianDiffuser, t,
     return d_loss, g_loss
 
 
-def Train(dataloader_train, GaussianDiffuser, epoch_num):
+def Train(dataloader_train, GaussianDiffuser, epoch_num, stage):
     for epoch in range(epoch_num):
         running_classification_loss = 0.0
         fid_score = -0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
         for step, patch in loop:
             hsi, ndsm, rgb, label = get_modalities(patch)
-            feature_hsi, feature_ndsm, feature_rgb = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            if stage == 1:
+                encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            feature_hsi, feature_ndsm, feature_rgb = None
             t = torch.randint(0, T, (BATCH_SIZE,), device=CUDA0).long()
             # train the noise predictor
             noised_features, noise_losses = noise_predictor_trainer(GaussianDiffuser, t,
