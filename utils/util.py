@@ -214,3 +214,11 @@ def calculate_fid(act1, act2):
     fid = ssdiff + np.trace(sigma1 + sigma2 - 2.0 * covmean)
     return fid
 
+
+def get_features(root):
+    hsi_feature = torch.load(root+'/hsi.pth')
+    ndsm_feature = torch.load(root+'/ndsm.pth')
+    rgb_feature = torch.load(root+'/rgb.pth')
+    return hsi_feature, ndsm_feature, rgb_feature
+
+
