@@ -7,6 +7,7 @@ from params import *
 
 
 dataset = GenerateDatasets(DATA_ROOT)
+dataset2 = GenerateDatasets2(DATA_ROOT+'/features')
 data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 
 encoder_hsi = GenerateEncoders(1)

@@ -6,7 +6,7 @@ from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
 from data_loader.dataset import DatasetFromTensor
 import tqdm
-from utils.util import calculate_fid
+# from .utils.util import calculate_fid
 from params import *
 
 
@@ -94,6 +94,16 @@ def GenerateDatasets(root):
     data_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
     data_rgb = torch.load(root + '/rgb.pth', weights_only=False)
     gt = torch.load(root + '/gt.pth', weights_only=False)
+
+    dataset = DatasetFromTensor(data_hsi, data_ndsm, data_rgb, gt, small_batches=IF_SMALL_BATCHES)
+    return dataset
+
+
+def GenerateDatasets2(root):
+    data_hsi = torch.load(root + '/hsi.pth', weights_only=False)
+    data_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
+    data_rgb = torch.load(root + '/rgb.pth', weights_only=False)
+    gt = torch.load( GT_PATH, weights_only=False)
 
     dataset = DatasetFromTensor(data_hsi, data_ndsm, data_rgb, gt, small_batches=IF_SMALL_BATCHES)
     return dataset

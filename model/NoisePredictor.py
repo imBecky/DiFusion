@@ -4,7 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 import copy
 from tqdm import tqdm
-from utils.util import EMA
+from .utils.util import EMA
 
 CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
