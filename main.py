@@ -5,9 +5,7 @@ from model.UNet import Unet
 import torch
 from params import *
 
-
-dataset = GenerateDatasets(DATA_ROOT)
-dataset2 = GenerateDatasets2(DATA_ROOT+'/features')
+dataset = GenerateDatasets(DATA_ROOT, TRAINING_STAGE)
 data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 
 encoder_hsi = GenerateEncoders(1)
@@ -49,7 +47,7 @@ GaussianDiffuser = GaussianDiffusion(encoder_hsi, encoder_ndsm, encoder_rgb,
                                      discriminator_optimizer, classifier_optimizer,
                                      beta_array)
 GaussianDiffuser = GaussianDiffuser.to(CUDA0)
-Train(data_loader_train, GaussianDiffuser, CLS_EPOCH, stage=1)  # stage1:encode, stage2:afterwards
+Train(data_loader_train, GaussianDiffuser, CLS_EPOCH, stage=TRAINING_STAGE)  # stage1:encode, stage2:afterwards
 # Test(data_loader_test, encoder_rgb, classifier)
 
 
