@@ -6,7 +6,11 @@ import torch
 import os
 from params import *
 
-dataset = GenerateDatasets(DATA_ROOT, TRAINING_STAGE)
+if TRAINING_STAGE == 2:
+    root = DATA_ROOT+'/features'
+else:
+    root = DATA_ROOT
+dataset = GenerateDatasets(root)
 data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 
 encoder_hsi = GenerateEncoders(1)
@@ -51,37 +55,3 @@ GaussianDiffuser = GaussianDiffuser.to(CUDA0)
 Train(data_loader_train, GaussianDiffuser, CLS_EPOCH, stage=TRAINING_STAGE)  # stage1:encode, stage2:afterwards
 # Test(data_loader_test, encoder_rgb, classifier)
 
-
-# 定义目录路径
-directory = './data/tensor/features'
-
-# 定义需要读取的文件列表
-files = ['hsi.pth', 'ndsm.pth', 'rgb.pth']
-
-# 存储每个文件的内存大小
-memory_sizes = {}
-
-# 遍历文件列表
-for file in files:
-    # 构建完整的文件路径
-    file_path = os.path.join(directory, file)
-
-    # 检查文件是否存在
-    if os.path.exists(file_path):
-        # 加载.pth文件
-        tensor = torch.load(file_path)
-
-        # 计算内存大小（以字节为单位）
-        memory_size = torch.tensor(tensor).storage().nbytes
-
-        # 将内存大小转换为更易读的格式（例如MB）
-        memory_size_mb = memory_size / (1024 * 1024)
-
-        # 存储结果
-        memory_sizes[file] = memory_size_mb
-        print(f"{file}占用内存大小：{memory_size_mb:.2f} MB")
-    else:
-        print(f"文件{file}不存在")
-
-# 输出所有文件的内存大小
-print("所有文件的内存大小：", memory_sizes)

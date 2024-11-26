@@ -149,6 +149,7 @@ def encode_modalities(hsi, ndsm, rgb, GaussianDiffuser):
     torch.save(feature_ndsm, './data/tensor/features/ndsm.pth')
     torch.save(feature_rgb, './data/tensor/features/rgb.pth')
     print('encoded features saved!!!')
+    return feature_hsi, feature_ndsm, feature_rgb
 
 
 def noise_predictor_trainer(GaussianDiffuser, t,
@@ -215,16 +216,16 @@ def Train(dataloader_train, GaussianDiffuser, epoch_num, stage):
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
         for step, patch in loop:
             hsi, ndsm, rgb, label = get_modalities(patch)
-            if stage == 1:
-                encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
-            feature_hsi, feature_ndsm, feature_rgb = None
+            encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            torch.cuda.empty_cache()
+            feature_hsi, feature_ndsm, feature_rgb = hsi, ndsm, rgb
             t = torch.randint(0, T, (BATCH_SIZE,), device=CUDA0).long()
             # train the noise predictor
             noised_features, noise_losses = noise_predictor_trainer(GaussianDiffuser, t,
                                                                     feature_hsi, feature_ndsm, feature_rgb)
             noised_hsi, noised_ndsm, noised_rgb = noised_features
             block2(GaussianDiffuser, t, feature_hsi, feature_ndsm, feature_rgb, label,
-                   noised_hsi, noised_ndsm, noised_rgb)
+                noised_hsi, noised_ndsm, noised_rgb)
             # running_classification_loss += classification_loss_hsi
             GaussianDiffuser.noise_predictor_optimizer.step()
             # fid_score = calculate_fid(noise_hsi.cpu().detach().numpy(), noise_hsi_hat.cpu().detach().numpy())
