@@ -12,4 +12,3 @@ image_size = 32
 feature_channels = 1
 IF_SMALL_BATCHES = True
 dim_mults = (1, 2, 4,)
-TRAINING_STAGE = 2

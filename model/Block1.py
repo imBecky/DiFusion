@@ -44,14 +44,15 @@ class Reshape(nn.Module):
 
 class Classifier(nn.Module):
     """TODO: deepen the model"""
+
     def __init__(self):
         super(Classifier, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(1000, 16*16),
+            nn.Linear(1000, 16 * 16),
             nn.ReLU(inplace=True),
-            nn.BatchNorm1d(16*16),
+            nn.BatchNorm1d(16 * 16),
             nn.Dropout(0.5),
-            nn.Linear(16*16, 32*32),
+            nn.Linear(16 * 16, 32 * 32),
             nn.ReLU(inplace=True),
             Reshape((32, 32))
         )
@@ -99,18 +100,8 @@ def GenerateDatasets(root):
     return dataset
 
 
-def GenerateDatasets2(root):
-    data_hsi = torch.load(root + '/hsi.pth', weights_only=False)
-    data_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
-    data_rgb = torch.load(root + '/rgb.pth', weights_only=False)
-    gt = torch.load( GT_PATH, weights_only=False)
-
-    dataset = DatasetFromTensor(data_hsi, data_ndsm, data_rgb, gt, small_batches=IF_SMALL_BATCHES)
-    return dataset
-
-
 def GenerateDataLoaders(hsi, ndsm, rgb):
-    data_loader_hsi = DataLoader(hsi,  batch_size=32, shuffle=True)
+    data_loader_hsi = DataLoader(hsi, batch_size=32, shuffle=True)
     data_loader_ndsm = DataLoader(ndsm, batch_size=32, shuffle=True)
     data_loader_rgb = DataLoader(rgb, batch_size=32, shuffle=True)
     return data_loader_hsi, data_loader_ndsm, data_loader_rgb
@@ -134,7 +125,7 @@ def GenerateEncoders(option=0):
 
 
 def get_modalities(patch):
-    hsi, ndsm, rgb, label = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0),\
+    hsi, ndsm, rgb, label = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0), \
                             patch['rgb'].to(CUDA0), patch['label'].to(CUDA0)
     permuted_tensors = [tensor.permute(0, 3, 1, 2) for tensor in [hsi, ndsm, rgb]]
     hsi, ndsm, rgb = permuted_tensors
@@ -145,10 +136,6 @@ def encode_modalities(hsi, ndsm, rgb, GaussianDiffuser):
     feature_hsi = GaussianDiffuser.encoder_hsi(hsi)
     feature_ndsm = GaussianDiffuser.encoder_ndsm(ndsm)
     feature_rgb = GaussianDiffuser.encoder_rgb(rgb)
-    torch.save(feature_hsi, './data/tensor/features/hsi.pth')
-    torch.save(feature_ndsm, './data/tensor/features/ndsm.pth')
-    torch.save(feature_rgb, './data/tensor/features/rgb.pth')
-    print('encoded features saved!!!')
     return feature_hsi, feature_ndsm, feature_rgb
 
 
@@ -157,9 +144,9 @@ def noise_predictor_trainer(GaussianDiffuser, t,
     losses = []
     noised_features = []
     for i, name in enumerate(['hsi', 'ndsm', 'rgb']):
-        feature = locals()['feature_'+name]
-        optimizer = getattr(GaussianDiffuser, 'noise_predictor_optimizer_'+name)
-        noise_predictor = getattr(GaussianDiffuser, 'noise_predictor_'+name)
+        feature = locals()['feature_' + name]
+        optimizer = getattr(GaussianDiffuser, 'noise_predictor_optimizer_' + name)
+        noise_predictor = getattr(GaussianDiffuser, 'noise_predictor_' + name)
         optimizer.zero_grad()
         noise = torch.randn_like(feature).to(CUDA0)
         X_t = GaussianDiffuser.diffuse(feature, t, noise)
@@ -173,7 +160,7 @@ def noise_predictor_trainer(GaussianDiffuser, t,
 
 
 def generate_feature(GaussianDiffuser, name, noised_x_t, t):
-    predictor = getattr(GaussianDiffuser, 'noise_predictor_'+name)
+    predictor = getattr(GaussianDiffuser, 'noise_predictor_' + name)
     noise_hat = predictor(noised_x_t, t)
     feature_hat = GaussianDiffuser.generate(noised_x_t.shape, noise_hat, t)
     return feature_hat
@@ -186,7 +173,7 @@ def block2(GaussianDiffuser, t,
     d_loss = torch.tensor(0.).to(CUDA0)
     GaussianDiffuser.discriminator_optimizer.zero_grad()
     for i, name in enumerate(['hsi', 'ndsm', 'rgb']):
-        noised_x_t = locals()['noised_'+name]
+        noised_x_t = locals()['noised_' + name]
         feature_hat = generate_feature(GaussianDiffuser, name, noised_x_t, t)
         d_labels = torch.full((BATCH_SIZE, 1), i, dtype=torch.float32).to(CUDA0)
         output_fake = GaussianDiffuser.discriminator(feature_hat.detach().to(CUDA0))
@@ -197,37 +184,37 @@ def block2(GaussianDiffuser, t,
     GaussianDiffuser.discriminator_optimizer.step()
     g_loss = []
     for i, name in enumerate(['hsi', 'ndsm', 'rgb']):
-        optimizer = getattr(GaussianDiffuser, 'noise_predictor_optimizer_'+name)
+        optimizer = getattr(GaussianDiffuser, 'noise_predictor_optimizer_' + name)
         optimizer.zero_grad()
-        noised_x_t = locals()['noised_'+name]
-        g_labels = torch.full((BATCH_SIZE,), i, dtype=torch.long).to(CUDA0)
+        noised_x_t = locals()['noised_' + name]
+        g_labels = torch.full((BATCH_SIZE,), i, dtype=torch.float32).to(CUDA0)
         feature_hat = generate_feature(GaussianDiffuser, name, noised_x_t, t)
         outputs_fake = GaussianDiffuser.discriminator(feature_hat)
         g_loss.append(GaussianDiffuser.generate_criterion(outputs_fake, g_labels))
-        g_loss[i].backward(retain_graph=(i!=2))
+        g_loss[i].backward(retain_graph=(i != 2))
         optimizer.step()
     return d_loss, g_loss
 
 
-def Train(dataloader_train, GaussianDiffuser, epoch_num, stage):
+def Train(dataloader_train, GaussianDiffuser, epoch_num):
     for epoch in range(epoch_num):
         running_classification_loss = 0.0
         fid_score = -0.0
         loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
         for step, patch in loop:
             hsi, ndsm, rgb, label = get_modalities(patch)
-            encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            feature_hsi, feature_ndsm, feature_rgb = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+            del hsi, ndsm, rgb
+            # del GaussianDiffuser.encoder_ndsm, GaussianDiffuser.encoder_hsi, GaussianDiffuser.encoder_rgb
             torch.cuda.empty_cache()
-            feature_hsi, feature_ndsm, feature_rgb = hsi, ndsm, rgb
             t = torch.randint(0, T, (BATCH_SIZE,), device=CUDA0).long()
             # train the noise predictor
             noised_features, noise_losses = noise_predictor_trainer(GaussianDiffuser, t,
                                                                     feature_hsi, feature_ndsm, feature_rgb)
             noised_hsi, noised_ndsm, noised_rgb = noised_features
             block2(GaussianDiffuser, t, feature_hsi, feature_ndsm, feature_rgb, label,
-                noised_hsi, noised_ndsm, noised_rgb)
+                   noised_hsi, noised_ndsm, noised_rgb)
             # running_classification_loss += classification_loss_hsi
-            GaussianDiffuser.noise_predictor_optimizer.step()
             # fid_score = calculate_fid(noise_hsi.cpu().detach().numpy(), noise_hsi_hat.cpu().detach().numpy())
         print(f'Epoch {epoch + 1}, Loss: {running_classification_loss / len(dataloader_train)}, FID: {fid_score}')
 
@@ -251,4 +238,3 @@ def Test(dataloader_test, encoder, classifier):
             correct += count
     accuracy = 100 * correct / total
     print(f'Accuracy of the network on the test images: {accuracy:.2f}%')
-

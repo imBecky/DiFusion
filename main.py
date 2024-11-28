@@ -6,11 +6,7 @@ import torch
 import os
 from params import *
 
-if TRAINING_STAGE == 2:
-    root = DATA_ROOT+'/features'
-else:
-    root = DATA_ROOT
-dataset = GenerateDatasets(root)
+dataset = GenerateDatasets(DATA_ROOT)
 data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 
 encoder_hsi = GenerateEncoders(1)
@@ -23,7 +19,7 @@ beta_array = cosine_annealing_schedule(T, 0.1)
 discriminator = Discriminator()
 classifier = Classifier()
 noise_predictor_criterion = F.smooth_l1_loss
-generate_criterion = nn.CrossEntropyLoss()
+generate_criterion = nn.MSELoss()
 discriminator_criterion = CosineSimilarityLoss()
 classifier_criterion = CosineSimilarityLoss()
 noise_predictor_optimizer_hsi = optim.Adam(noise_predictor_hsi.parameters(), lr=LEARNING_RATE1)
@@ -52,6 +48,6 @@ GaussianDiffuser = GaussianDiffusion(encoder_hsi, encoder_ndsm, encoder_rgb,
                                      discriminator_optimizer, classifier_optimizer,
                                      beta_array)
 GaussianDiffuser = GaussianDiffuser.to(CUDA0)
-Train(data_loader_train, GaussianDiffuser, CLS_EPOCH, stage=TRAINING_STAGE)  # stage1:encode, stage2:afterwards
+Train(data_loader_train, GaussianDiffuser, CLS_EPOCH)  # stage1:encode, stage2:afterwards
 # Test(data_loader_test, encoder_rgb, classifier)
 
