@@ -197,15 +197,18 @@ def block2(GaussianDiffuser, t,
 
 
 def Train(dataloader_train, GaussianDiffuser, epoch_num):
+    loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
+    feature_hsi, feature_ndsm, feature_rgb, label = [], [], [], []
+    for step, patch in loop:
+        hsi, ndsm, rgb, label = get_modalities(patch)
+        feature_hsi, feature_ndsm, feature_rgb = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
+    del hsi, ndsm, rgb
+    del GaussianDiffuser.encoder_ndsm, GaussianDiffuser.encoder_hsi, GaussianDiffuser.encoder_rgb
     for epoch in range(epoch_num):
         running_classification_loss = 0.0
         fid_score = -0.0
-        loop = tqdm.tqdm(enumerate(dataloader_train), total=len(dataloader_train))
         for step, patch in loop:
-            hsi, ndsm, rgb, label = get_modalities(patch)
-            feature_hsi, feature_ndsm, feature_rgb = encode_modalities(hsi, ndsm, rgb, GaussianDiffuser)
-            del hsi, ndsm, rgb
-            # del GaussianDiffuser.encoder_ndsm, GaussianDiffuser.encoder_hsi, GaussianDiffuser.encoder_rgb
+            # del step, patch
             torch.cuda.empty_cache()
             t = torch.randint(0, T, (BATCH_SIZE,), device=CUDA0).long()
             # train the noise predictor
@@ -216,7 +219,7 @@ def Train(dataloader_train, GaussianDiffuser, epoch_num):
                    noised_hsi, noised_ndsm, noised_rgb)
             # running_classification_loss += classification_loss_hsi
             # fid_score = calculate_fid(noise_hsi.cpu().detach().numpy(), noise_hsi_hat.cpu().detach().numpy())
-        print(f'Epoch {epoch + 1}, Loss: {running_classification_loss / len(dataloader_train)}, FID: {fid_score}')
+        # print(f'Epoch {epoch + 1}, Loss: {running_classification_loss / len(dataloader_train)}, FID: {fid_score}')
 
 
 def Test(dataloader_test, encoder, classifier):

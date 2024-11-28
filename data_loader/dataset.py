@@ -5,7 +5,9 @@ SMALL_PATCH_NUM = 992
 
 
 class DatasetFromTensor(data.Dataset):
-    def __init__(self, hsi, ndsm, rgb, labels, stride=(2, 2), patch_size=(32, 32), transform=None, small_batches=False):
+    def __init__(self, hsi, ndsm, rgb, labels,
+                 encoder_hsi, encoder_ndsm, encoder_rgb,
+                 stride=(2, 2), patch_size=(32, 32), transform=None, small_batches=False):
         super(DatasetFromTensor, self).__init__()
         self.hsi = hsi.float()
         self.ndsm = ndsm.float()
@@ -16,6 +18,16 @@ class DatasetFromTensor(data.Dataset):
         self.transformation = transform
         self.small_batches = small_batches
         self.patches = self._generate_patches()
+        self.encoder_hsi = encoder_hsi
+        self.encoder_ndsm = encoder_ndsm
+        self.encoder_rgb = encoder_rgb
+        self.hsi, self.ndsm, self.rgb = self.generate_features()
+
+    def generate_features(self):
+        feature_hsi = self.encoder_hsi(self.hsi)
+        feature_ndsm = self.encoder_ndsm(self.ndsm)
+        feature_rgb = self.encoder_rgb(self.rgb)
+        return feature_hsi, feature_ndsm, feature_rgb
 
     def _generate_patches(self):
         count = 0
