@@ -6,12 +6,11 @@ import torch
 import os
 from params import *
 
-dataset = GenerateDatasets(DATA_ROOT)
-data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
-
 encoder_hsi = GenerateEncoders(1)
 encoder_ndsm = GenerateEncoders(2)
 encoder_rgb = GenerateEncoders(3)
+dataset = GenerateDatasets(DATA_ROOT, encoder_hsi, encoder_ndsm, encoder_rgb)
+data_loader_train, data_hsi_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 noise_predictor_hsi = Unet(dim=image_size, channels=feature_channels, dim_mults=dim_mults)
 noise_predictor_ndsm = Unet(dim=image_size, channels=feature_channels, dim_mults=dim_mults)
 noise_predictor_rgb = Unet(dim=image_size, channels=feature_channels, dim_mults=dim_mults)

@@ -27,6 +27,10 @@ class DatasetFromTensor(data.Dataset):
         feature_hsi = self.encoder_hsi(self.hsi)
         feature_ndsm = self.encoder_ndsm(self.ndsm)
         feature_rgb = self.encoder_rgb(self.rgb)
+        torch.save(feature_hsi, '../data/tensor/hsi.pth')
+        torch.save(feature_ndsm, '../data/tensor/ndsm.pth')
+        torch.save(feature_rgb, '../data/tensor/rgb.pth')
+        print('encoding done!')
         return feature_hsi, feature_ndsm, feature_rgb
 
     def _generate_patches(self):

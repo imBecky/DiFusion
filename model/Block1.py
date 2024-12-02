@@ -90,13 +90,14 @@ def SpliteDataset(dataset, batch_size, ratio):
     return train_loader, test_loader
 
 
-def GenerateDatasets(root):
+def GenerateDatasets(root, encoder_hsi, encoder_ndsm, encoder_rgb):
     data_hsi = torch.load(root + '/hsi.pth', weights_only=False)
     data_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
     data_rgb = torch.load(root + '/rgb.pth', weights_only=False)
     gt = torch.load(root + '/gt.pth', weights_only=False)
-
-    dataset = DatasetFromTensor(data_hsi, data_ndsm, data_rgb, gt, small_batches=IF_SMALL_BATCHES)
+    dataset = DatasetFromTensor(data_hsi, data_ndsm, data_rgb, gt,
+                                encoder_hsi, encoder_ndsm, encoder_rgb,
+                                small_batches=IF_SMALL_BATCHES)
     return dataset
 
 
