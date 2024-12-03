@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torchvision.models import resnet50
 from torchvision.models import ResNet50_Weights
 from torch.utils.data import DataLoader, random_split
-from data_loader.dataset import DatasetFromTensor
+from data_loader.old_dataset import DatasetFromTensor
 import tqdm
 # from .utils.util import calculate_fid
 from params import *

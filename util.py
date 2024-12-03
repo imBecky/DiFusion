@@ -222,3 +222,28 @@ def get_features(root):
     return hsi_feature, ndsm_feature, rgb_feature
 
 
+def extract(a, t, x_shape):
+    batch_size = x_shape[0]
+    out = a.gather(-1, t)
+    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
+
+
+def cosine_annealing_schedule(length_T, initial_beta, final=0.001):
+    beta_schedual = initial_beta * (final / initial_beta) ** (0.5 * np.cos(np.pi * np.arange(length_T) / length_T))
+    beta_schedual = torch.from_numpy(beta_schedual)
+    return beta_schedual
+
+
+class CosineSimilarityLoss(nn.Module):
+    def __init__(self):
+        super(CosineSimilarityLoss, self).__init__()
+
+    def forward(self, input1, input2):
+        # 计算两个输入向量的点积
+        input1_normalized = F.normalize(input1, p=2, dim=1)
+        input2_normalized = F.normalize(input2, p=2, dim=1)
+        cosine_similarity = torch.sum(input1_normalized * input2_normalized, dim=1)
+
+        # 计算余弦相似度损失
+        loss = 1 - cosine_similarity
+        return loss.mean()  # 返回损失的平均值

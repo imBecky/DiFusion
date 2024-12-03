@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
-import numpy as np
-
-CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from util import extract, Reshape
+from .params import *
 
 
 class Discriminator(nn.Module):
@@ -30,6 +29,26 @@ class Discriminator(nn.Module):
         x = x.float()
         output = self.model(x)
         return output.view(-1, 1)
+
+
+class Classifier(nn.Module):
+    """TODO: deepen the model"""
+
+    def __init__(self):
+        super(Classifier, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(1000, 16 * 16),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm1d(16 * 16),
+            nn.Dropout(0.5),
+            nn.Linear(16 * 16, 32 * 32),
+            nn.ReLU(inplace=True),
+            Reshape((32, 32))
+        )
+
+    def forward(self, x):
+        x = self.model(x)
+        return x
 
 
 class GaussianDiffusion(nn.Module):
@@ -130,18 +149,3 @@ class GaussianDiffusion(nn.Module):
             X_0_hats = torch.concatenate((X_0_hats, X_0))
         return X_0_hats
 
-
-def generate_linear_schedule(T, low, high):
-    return np.linspace(low, high, T)
-
-
-def cosine_annealing_schedule(length_T, initial_beta, final=0.001):
-    beta_schedual = initial_beta * (final / initial_beta) ** (0.5 * np.cos(np.pi * np.arange(length_T) / length_T))
-    beta_schedual = torch.from_numpy(beta_schedual)
-    return beta_schedual
-
-
-def extract(a, t, x_shape):
-    batch_size = x_shape[0]
-    out = a.gather(-1, t)
-    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
