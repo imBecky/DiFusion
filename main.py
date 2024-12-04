@@ -8,7 +8,7 @@ from model.UNet import Unet
 from model.models import Discriminator, Classifier, GaussianDiffusion
 from utils.util import cosine_annealing_schedule, CosineSimilarityLoss
 
-dataset = Dataset_from_feature(DATA_ROOT+'/features')
+dataset = Dataset_from_feature(DATA_ROOT)
 data_loader_train, data_loader_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
 
 noise_predictor_hsi = Unet(dim=image_size, channels=feature_channels, dim_mults=dim_mults)

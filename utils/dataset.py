@@ -14,33 +14,20 @@ class Dataset_from_feature(data.Dataset):
 
     def _get_data(self):
         if IF_SMALL_DATASET:
-            gt = torch.load(os.path.dirname(self.root) + '/gt.pth', weights_only=False)[:20480]
-            feature_hsi = torch.load(self.root + '/hsi.pth',
-                                     weights_only=False, map_location=torch.device('cpu'))
-            small_feature_hsi = feature_hsi[:20480]
-            small_feature_hsi = small_feature_hsi.to(CUDA0)
-            del feature_hsi
-
-            feature_ndsm = torch.load(self.root + '/ndsm.pth',
-                                      weights_only=False, map_location=torch.device('cpu'))
-            small_feature_ndsm = feature_ndsm[:20480]
-            small_feature_ndsm = small_feature_ndsm.to(CUDA0)
-            del feature_ndsm
-
-            feature_rgb = torch.load(self.root + '/rgb.pth',
-                                     weights_only=False, map_location=torch.device('cpu'))
-            small_feature_rgb = feature_rgb[:20480]
-            small_feature_rgb = small_feature_rgb.to(CUDA0)
-            del feature_rgb
-            torch.cuda.empty_cache()
-            for item in [small_feature_hsi, small_feature_ndsm, small_feature_rgb, gt]:
+            root = self.root+'/small'
+            gt = torch.load(root + '/gt.pth', weights_only=False)
+            feature_hsi = torch.load(root + '/hsi.pth', weights_only=False)
+            feature_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
+            feature_rgb = torch.load(root + '/rgb.pth', weights_only=False)
+            for item in [feature_hsi, feature_ndsm, feature_rgb, gt]:
                 print(item.shape)
-            return small_feature_hsi, small_feature_ndsm, small_feature_rgb, gt
+            return feature_hsi, feature_ndsm, feature_rgb, gt
         else:
-            gt = torch.load(os.path.dirname(self.root) + '/gt.pth', weights_only=False)
-            feature_hsi = torch.load(self.root + '/hsi.pth', weights_only=False)
-            feature_ndsm = torch.load(self.root + '/ndsm.pth', weights_only=False)
-            feature_rgb = torch.load(self.root + '/rgb.pth', weights_only=False)
+            root = self.root + '/feature'
+            gt = torch.load(root + '/gt.pth', weights_only=False)
+            feature_hsi = torch.load(root + '/hsi.pth', weights_only=False)
+            feature_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
+            feature_rgb = torch.load(root + '/rgb.pth', weights_only=False)
             return feature_hsi, feature_ndsm, feature_rgb, gt
 
     def __getitem__(self, item):
@@ -59,5 +46,8 @@ def SpliteDataset(dataset, batch_size, ratio):
     return train_loader, test_loader
 
 
-dataset = Dataset_from_feature(DATA_ROOT+'/features')
+dataset = Dataset_from_feature(DATA_ROOT)
 data_loader_train, data_loader_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
+del dataset
+torch.cuda.empty_cache()
+
