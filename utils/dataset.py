@@ -2,7 +2,7 @@ import os
 import torch.utils.data as data
 from torch.utils.data import DataLoader, random_split
 import torch
-from utils.params import DATA_ROOT, BATCH_SIZE, IF_SMALL_DATASET, CUDA0
+from utils.params import IF_SMALL_DATASET
 
 
 class Dataset_from_feature(data.Dataset):
@@ -46,8 +46,4 @@ def SpliteDataset(dataset, batch_size, ratio):
     return train_loader, test_loader
 
 
-dataset = Dataset_from_feature(DATA_ROOT)
-data_loader_train, data_loader_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
-del dataset
-torch.cuda.empty_cache()
 
