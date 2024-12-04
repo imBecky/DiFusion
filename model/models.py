@@ -1,7 +1,8 @@
-import torch
 import torch.nn as nn
-from util import extract, Reshape
-from .params import *
+from torchvision.models import resnet50
+from torchvision.models import ResNet50_Weights
+from utils.util import extract, Reshape
+from utils.params import *
 
 
 class Discriminator(nn.Module):
@@ -149,3 +150,38 @@ class GaussianDiffusion(nn.Module):
             X_0_hats = torch.concatenate((X_0_hats, X_0))
         return X_0_hats
 
+
+class MyEncoder(nn.Module):
+    def __init__(self, input_dim):
+        super(MyEncoder, self).__init__()
+        self.input_dim = input_dim
+        self.encoder = self.gen_encoder()
+        self.reshape = Reshape((1, 32, 32))
+
+    def gen_encoder(self):
+        encoder = resnet50(weights=ResNet50_Weights.DEFAULT).eval()
+        encoder.conv1 = torch.nn.Conv2d(self.input_dim, 64, kernel_size=(7, 7), stride=(2, 2), padding=3, bias=False)
+        encoder.fc = torch.nn.Linear(2048, 1024, bias=True)
+        return encoder
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.reshape(x)
+        return x
+
+
+def GenerateEncoders(option=0):
+    if option == 0:
+        print('No encoder generated!')
+    elif option == 1:
+        encoder1 = MyEncoder(48)
+        encoder1 = encoder1.to(CUDA0)
+        return encoder1
+    elif option == 2:
+        encoder2 = MyEncoder(1)
+        encoder2 = encoder2.to(CUDA0)
+        return encoder2
+    elif option == 3:
+        encoder3 = MyEncoder(3)
+        encoder3 = encoder3.to(CUDA0)
+        return encoder3

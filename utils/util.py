@@ -247,3 +247,30 @@ class CosineSimilarityLoss(nn.Module):
         # 计算余弦相似度损失
         loss = 1 - cosine_similarity
         return loss.mean()  # 返回损失的平均值
+
+
+def split_gt(gt, patch_size, stride):
+    # 计算每个维度可以分割成多少个patch
+    patches_x = (gt.shape[1] - patch_size[0]) // stride[0] + 1
+    patches_y = (gt.shape[0] - patch_size[1]) // stride[1] + 1
+
+    # 初始化一个列表来存储所有的patches
+    patches = []
+
+    # 循环遍历每个patch的位置
+    for i in range(patches_y):
+        for j in range(patches_x):
+            # 计算当前patch的坐标
+            x_start = j * stride[0]
+            y_start = i * stride[1]
+
+            # 提取当前patch
+            patch = gt[y_start:y_start + patch_size[1], x_start:x_start + patch_size[0]]
+
+            # 将patch添加到列表中
+            patches.append(patch)
+
+    # 将列表转换为一个numpy数组
+    patches = np.array(patches)
+
+    return patches

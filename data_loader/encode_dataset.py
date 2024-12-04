@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 import tqdm
-from params import DATA_ROOT, BATCH_SIZE, CUDA0
+from utils.params import DATA_ROOT, BATCH_SIZE, CUDA0
 from torch.utils.data import DataLoader
 from torchvision.models import resnet50
 from torchvision.models import ResNet50_Weights
@@ -13,7 +13,7 @@ class Dataset_from_data(data.Dataset):
     def __init__(self, root, stride=(2, 2), patch_size=(32, 32)):
         super(Dataset_from_data, self).__init__()
         self.root = root
-        self.hsi, self.ndsm, self.rgb = self._getdata()
+        self.hsi, self.ndsm, self.rgb, self.gt = self._getdata()
         self.stride = stride
         self.patch_size = patch_size
         self.patches = self._generate_patches()
@@ -22,7 +22,8 @@ class Dataset_from_data(data.Dataset):
         hsi = torch.load(self.root + '/hsi.pth', weights_only=False)
         ndsm = torch.load(self.root + '/ndsm.pth', weights_only=False).float()
         rgb = torch.load(self.root + '/rgb.pth', weights_only=False).float()
-        return hsi, ndsm, rgb
+        gt = torch.load(self.root + '/gt.pth', weights_only=False)
+        return hsi, ndsm, rgb, gt
 
     def _generate_patches(self):
         count = 0
@@ -36,6 +37,7 @@ class Dataset_from_data(data.Dataset):
                 patch['hsi'] = self.hsi[x:x + patch_width, y:y + patch_height, :]
                 patch['ndsm'] = self.ndsm[x:x + patch_width, y:y + patch_height, :]
                 patch['rgb'] = self.rgb[x:x + patch_width, y:y + patch_height, :]
+                patch['gt'] = self.gt[x:x + patch_width, y:y + patch_height]
                 patches.append(patch)
                 count += 1
         return patches
@@ -48,10 +50,10 @@ class Dataset_from_data(data.Dataset):
 
 
 def get_modalities(patch):
-    hsi, ndsm, rgb = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0), patch['rgb'].to(CUDA0)
+    hsi, ndsm, rgb, gt = patch['hsi'].to(CUDA0), patch['ndsm'].to(CUDA0), patch['rgb'].to(CUDA0), patch['gt'].to(CUDA0)
     permuted_tensors = [tensor.permute(0, 3, 1, 2) for tensor in [hsi, ndsm, rgb]]
     hsi, ndsm, rgb = permuted_tensors
-    return hsi, ndsm, rgb
+    return hsi, ndsm, rgb, gt
 
 
 class Reshape(nn.Module):
@@ -113,23 +115,28 @@ def encode_modalities(dataloader, encoder, option=0, save_dir='./encoded_feature
 
     loop = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))
     for step, patch in loop:
-        hsi, ndsm, rgb = get_modalities(patch)
+        hsi, ndsm, rgb, gt = get_modalities(patch)
         if option == 1:
             data = hsi
-            del ndsm, rgb
+            del ndsm, rgb, gt
             torch.cuda.empty_cache()
         elif option == 2:
             data = ndsm
-            del hsi, rgb
+            del hsi, rgb, gt
             torch.cuda.empty_cache()
         elif option == 3:
             data = rgb
-            del hsi, ndsm
+            del hsi, ndsm, gt
             torch.cuda.empty_cache()
+        elif option == 4:
+            data = gt
+            del hsi, ndsm, rgb
+            # filename = os.path.join(save_dir, f'encoded_data_{step}.pth')
+            # torch.save(data, filename)
         else:
-            raise ValueError("Option must be a figure of 1, 2, or 3.")
+            raise ValueError("Option must be a figure of 1, 2, 3 or 4.")
 
-        encoded_data = encoder(data)
+        encoded_data = data
 
         filename = os.path.join(save_dir, f'encoded_data_{step}.pth')
         torch.save(encoded_data, filename)
@@ -147,11 +154,11 @@ def encode_modalities(dataloader, encoder, option=0, save_dir='./encoded_feature
 
 
 encoder_hsi = GenerateEncoders(1)
-encoder_ndsm = GenerateEncoders(2)
-encoder_rgb = GenerateEncoders(3)
-raw_dataset = Dataset_from_data(DATA_ROOT)
+# encoder_ndsm = GenerateEncoders(2)
+# encoder_rgb = GenerateEncoders(3)
+raw_dataset = Dataset_from_data('.'+DATA_ROOT)
 raw_data_loader = DataLoader(raw_dataset, batch_size=BATCH_SIZE, shuffle=False)
-features_hsi = encode_modalities(raw_data_loader, encoder_hsi, 1)
-torch.save(features_hsi, '../data/tensor/features/hsi.pth')
+features_gt = encode_modalities(raw_data_loader, encoder_hsi, 4)
+torch.save(features_gt, '../data/tensor/features/gt.pth')
 print(f'Done!')
 

@@ -1,12 +1,12 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
-from .params import *
-from dataset import Dataset_from_feature, SpliteDataset
-from UNet import Unet
-from models import Discriminator, Classifier, GaussianDiffusion
-from util import cosine_annealing_schedule, CosineSimilarityLoss
+from train import Train
+from utils.params import *
+from utils.dataset import Dataset_from_feature, SpliteDataset
+from model.UNet import Unet
+from model.models import Discriminator, Classifier, GaussianDiffusion
+from utils.util import cosine_annealing_schedule, CosineSimilarityLoss
 
 dataset = Dataset_from_feature(DATA_ROOT+'/features')
 data_loader_train, data_loader_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
@@ -46,4 +46,4 @@ GaussianDiffuser = GaussianDiffusion(noise_predictor_hsi, noise_predictor_ndsm, 
                                      discriminator_optimizer, classifier_optimizer,
                                      beta_array)
 GaussianDiffuser = GaussianDiffuser.to(CUDA0)
-# Train(data_loader_train, GaussianDiffuser, CLS_EPOCH)
+Train(data_loader_train, GaussianDiffuser, CLS_EPOCH)

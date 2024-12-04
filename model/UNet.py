@@ -2,7 +2,7 @@ from functools import partial
 from einops import rearrange, reduce
 
 from torch import einsum
-from util import *
+from utils.util import *
 
 
 class WeightStandardizedConv2d(nn.Conv2d):

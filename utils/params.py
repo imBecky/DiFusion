@@ -10,5 +10,5 @@ LEARNING_RATE3 = 0.005  # lr for classifier
 T = 1000
 image_size = 32
 feature_channels = 1
-IF_SMALL_BATCHES = True
+IF_SMALL_DATASET = True
 dim_mults = (1, 2, 4,)
