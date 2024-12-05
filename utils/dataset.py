@@ -23,7 +23,7 @@ class Dataset_from_feature(data.Dataset):
             feature_rgb = torch.load(root + '/rgb.pth', weights_only=False)
             for item in [feature_hsi, feature_ndsm, feature_rgb, gt]:
                 print(item.shape)
-            return feature_hsi[:128], feature_ndsm[:128], feature_rgb[:128], gt[:128]
+            return feature_hsi[:33], feature_ndsm[:33], feature_rgb[:33], gt[:33]
         else:
             root = self.root + '/feature'
             gt = torch.load(root + '/gt.pth', weights_only=False)
@@ -43,8 +43,8 @@ def SpliteDataset(dataset, batch_size, ratio):
     train_size = int(ratio * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
     return train_loader, test_loader
 
 

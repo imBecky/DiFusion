@@ -37,18 +37,28 @@ class Classifier(nn.Module):
 
     def __init__(self):
         super(Classifier, self).__init__()
+        self.upsample_factor = 2
         self.model = nn.Sequential(
-            nn.Linear(1000, 16 * 16),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm1d(16 * 16),
-            nn.Dropout(0.5),
-            nn.Linear(16 * 16, 32 * 32),
-            nn.ReLU(inplace=True),
-            Reshape((32, 32))
+            nn.Conv2d(1, 16, kernel_size=(3, 3), stride=(1, 1), padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=1),
+            nn.ReLU()
         )
+        self.upsample = nn.Upsample(scale_factor=self.upsample_factor, mode='bilinear', align_corners=True)
+
+        self.final = nn.Conv2d(64, 1, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
     def forward(self, x):
+        x = x.float()
         x = self.model(x)
+        x = self.upsample(x)  # [batch_size, 64, 64, 64]
+        x = self.upsample(x)  # [batch_size, 64, 128, 128]
+
+        x = x[:, :, 48:80, 48:80]
+
+        x = self.final(x)  # [batch_size, 32, 32, 32]
         return x
 
 
