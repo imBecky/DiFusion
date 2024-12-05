@@ -23,7 +23,7 @@ class Dataset_from_feature(data.Dataset):
             feature_rgb = torch.load(root + '/rgb.pth', weights_only=False)
             for item in [feature_hsi, feature_ndsm, feature_rgb, gt]:
                 print(item.shape)
-            return feature_hsi, feature_ndsm, feature_rgb, gt
+            return feature_hsi[:128], feature_ndsm[:128], feature_rgb[:128], gt[:128]
         else:
             root = self.root + '/feature'
             gt = torch.load(root + '/gt.pth', weights_only=False)
