@@ -10,6 +10,7 @@ def get_modalities(patch):
                             patch[2].to(CUDA0), patch[3].to(CUDA0)
     # permuted_tensors = [tensor.permute(0, 3, 1, 2) for tensor in [hsi, ndsm, rgb]]
     # hsi, ndsm, rgb = permuted_tensors
+    label = label.float()
     return hsi, ndsm, rgb, label
 
 

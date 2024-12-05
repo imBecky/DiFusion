@@ -51,7 +51,6 @@ class Classifier(nn.Module):
         self.final = nn.Conv2d(64, 1, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
     def forward(self, x):
-        x = x.float()
         x = self.model(x)
         x = self.upsample(x)  # [batch_size, 64, 64, 64]
         x = self.upsample(x)  # [batch_size, 64, 128, 128]
