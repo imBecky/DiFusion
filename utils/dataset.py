@@ -2,7 +2,7 @@ import os
 import torch.utils.data as data
 from torch.utils.data import DataLoader, random_split
 import torch
-from utils.params import DATA_ROOT, BATCH_SIZE, IF_SMALL_DATASET, CUDA0
+from utils.params import IF_SMALL_DATASET
 
 
 class Dataset_from_feature(data.Dataset):
@@ -16,6 +16,8 @@ class Dataset_from_feature(data.Dataset):
         if IF_SMALL_DATASET:
             root = self.root+'/small'
             gt = torch.load(root + '/gt.pth', weights_only=False)
+            gt = torch.from_numpy(gt)
+            gt = torch.unsqueeze(gt, 1)
             feature_hsi = torch.load(root + '/hsi.pth', weights_only=False)
             feature_ndsm = torch.load(root + '/ndsm.pth', weights_only=False)
             feature_rgb = torch.load(root + '/rgb.pth', weights_only=False)
@@ -44,10 +46,3 @@ def SpliteDataset(dataset, batch_size, ratio):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     return train_loader, test_loader
-
-
-dataset = Dataset_from_feature(DATA_ROOT)
-data_loader_train, data_loader_test = SpliteDataset(dataset, BATCH_SIZE, 0.8)
-del dataset
-torch.cuda.empty_cache()
-

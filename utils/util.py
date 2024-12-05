@@ -260,17 +260,13 @@ def split_gt(gt, patch_size, stride):
     # 循环遍历每个patch的位置
     for i in range(patches_y):
         for j in range(patches_x):
-            # 计算当前patch的坐标
             x_start = j * stride[0]
             y_start = i * stride[1]
 
-            # 提取当前patch
             patch = gt[y_start:y_start + patch_size[1], x_start:x_start + patch_size[0]]
 
-            # 将patch添加到列表中
             patches.append(patch)
 
-    # 将列表转换为一个numpy数组
     patches = np.array(patches)
 
     return patches
