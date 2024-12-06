@@ -2,6 +2,7 @@ import torch
 DATA_ROOT = './data/tensor'
 GT_PATH = './data/tensor/gt.pth'
 CUDA0 = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+SEED = 13
 CLS_EPOCH = 3
 BATCH_SIZE = 8
 LEARNING_RATE1 = 0.0005  # lr for noise predictor

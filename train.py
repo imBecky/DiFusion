@@ -71,7 +71,7 @@ def Generate_n_Discriminate(GaussianDiffuser, t, feature_hsi, feature_ndsm, feat
         optimizer = getattr(GaussianDiffuser, 'noise_predictor_optimizer_' + name)
         optimizer.zero_grad()
         noised_x_t = locals()['noised_' + name]
-        g_labels = torch.full((BATCH_SIZE,), i, dtype=torch.float32).to(CUDA0)
+        g_labels = torch.full((BATCH_SIZE, 1), i, dtype=torch.float32).to(CUDA0)
         feature_hat = Generate(GaussianDiffuser, name, noised_x_t, t)
         outputs_fake = GaussianDiffuser.discriminator(feature_hat)
         g_loss.append(GaussianDiffuser.generate_criterion(outputs_fake, g_labels))

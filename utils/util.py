@@ -1,4 +1,6 @@
 import torch
+import random
+import os
 import numpy as np
 import cv2
 import torch.nn as nn
@@ -18,6 +20,17 @@ def try_gpu(i=0):
 
 
 DEVICE = try_gpu()
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # 如果使用多GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    os.environ['PYTHONHASHSEED'] = str(seed)
 
 
 def load_hsi_narray(path):
